@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Cadastrar Laboratório</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f6f9; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
+        .form-control { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .btn { width: 100%; padding: 0.75rem; background-color: #007bff; border: none; color: white; border-radius: 4px; cursor: pointer; font-size: 1rem; margin-top: 1rem; }
+        .btn-voltar { display: block; text-align: center; margin-top: 1rem; color: #666; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Cadastrar Laboratório</h2>
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label>Nome do Laboratório</label>
+                {{ form.nome }}
+            </div>
+            <div class="form-group">
+                <label>Capacidade Máxima</label>
+                {{ form.capacidade }}
+            </div>
+            <button type="submit" class="btn">Salvar Laboratório</button>
+        </form>
+        <a href="{% url 'home' %}" class="btn-voltar">Cancelar</a>
+    </div>
+</body>
+</html>

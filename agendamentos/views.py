@@ -2,8 +2,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from .forms import CustomUserCreationForm, ComputadorForm, EditarUsuarioForm
-from .models import Computador, Laboratorio, Perfil
+from .forms import CustomUserCreationForm, ComputadorForm, EditarUsuarioForm, AgendamentoForm, LaboratorioForm
+from .models import Computador, Laboratorio, Perfil, Agendamento
 
 def cadastrar(request):
     if request.method == 'POST':
@@ -38,13 +38,87 @@ def home(request):
     return render(request, 'agendamentos/home.html', context)
 
 @login_required
+def cadastrar_laboratorio(request):
+    is_gestor = request.user.is_superuser or (hasattr(request.user, 'perfil') and request.user.perfil.tipo in ['ADMIN', 'TECNICO'])
+    if not is_gestor:
+        messages.error(request, 'Acesso restrito para técnicos e administradores.')
+        return redirect('home')
+
+    if request.method == 'POST':
+        form = LaboratorioForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Laboratório cadastrado com sucesso!')
+            return redirect('home')
+    else:
+        form = LaboratorioForm()
+
+    return render(request, 'agendamentos/cadastrar_laboratorio.html', {'form': form})
+
+@login_required
+def cadastrar_computador(request):
+    is_gestor = request.user.is_superuser or (hasattr(request.user, 'perfil') and request.user.perfil.tipo in ['ADMIN', 'TECNICO'])
+    if not is_gestor:
+        messages.error(request, 'Acesso restrito para técnicos e administradores.')
+        return redirect('home')
+
+    if request.method == 'POST':
+        form = ComputadorForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Computador cadastrado com sucesso!')
+            return redirect('home')
+    else:
+        form = ComputadorForm()
+
+    return render(request, 'agendamentos/cadastrar_computador.html', {'form': form})
+
+@login_required
+def criar_agendamento(request, computador_id):
+    if not request.user.is_superuser:
+        if not hasattr(request.user, 'perfil') or not request.user.perfil.aprovado:
+            return render(request, 'agendamentos/pendente.html')
+
+    computador = get_object_or_404(Computador, id=computador_id)
+
+    if computador.status != 'DISPONIVEL':
+        messages.error(request, 'Esta máquina não está disponível para agendamento.')
+        return redirect('home')
+
+    if request.method == 'POST':
+        form = AgendamentoForm(request.POST)
+        if form.is_valid():
+            inicio = form.cleaned_data['data_hora_inicio']
+            fim = form.cleaned_data['data_hora_fim']
+
+            conflito = Agendamento.objects.filter(
+                computador=computador,
+                status='CONFIRMADO',
+                data_hora_inicio__lt=fim,
+                data_hora_fim__gt=inicio
+            ).exists()
+
+            if conflito:
+                messages.error(request, 'Este computador já está reservado nesse horário. Escolha outro intervalo.')
+            else:
+                agendamento = form.save(commit=False)
+                agendamento.usuario = request.user
+                agendamento.computador = computador
+                agendamento.save()
+                messages.success(request, f'Agendamento confirmado para {computador.identificador}!')
+                return redirect('home')
+    else:
+        form = AgendamentoForm()
+
+    return render(request, 'agendamentos/agendar.html', {'form': form, 'computador': computador})
+
+@login_required
 def liberar_usuarios(request):
     is_admin = request.user.is_superuser or (hasattr(request.user, 'perfil') and request.user.perfil.tipo == 'ADMIN')
     if not is_admin:
         messages.error(request, 'Acesso negado. Apenas administradores podem acessar esta página.')
         return redirect('home')
 
-    # Garante que todos os usuarios cadastrados tenham um Perfil criado
     for user_obj in User.objects.all():
         Perfil.objects.get_or_create(usuario=user_obj)
 
@@ -67,26 +141,6 @@ def aprovar_usuario(request, perfil_id):
     perfil.save()
     messages.success(request, f'Usuário {perfil.usuario.username} liberado com sucesso!')
     return redirect('liberar_usuarios')
-
-@login_required
-def cadastrar_computador(request):
-    is_gestor = request.user.is_superuser or (hasattr(request.user, 'perfil') and request.user.perfil.tipo in ['ADMIN', 'TECNICO'])
-    if not is_gestor:
-        messages.error(request, 'Acesso restrito para técnicos e administradores.')
-        return redirect('home')
-
-    if request.method == 'POST':
-        form = ComputadorForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Computador cadastrado com sucesso!')
-            return redirect('home')
-    else:
-        form = ComputadorForm()
-
-    return render(request, 'agendamentos/cadastrar_computador.html', {'form': form})
-
-# --- GESTÃO DE USUÁRIOS ---
 
 @login_required
 def gerenciar_usuarios(request):
@@ -132,8 +186,6 @@ def deletar_usuario(request, user_id):
         return redirect('home')
 
     usuario_obj = get_object_or_404(User, id=user_id)
-    
-    # Evita que o admin apague a si mesmo
     if usuario_obj == request.user:
         messages.error(request, 'Você não pode excluir sua própria conta.')
         return redirect('gerenciar_usuarios')
@@ -141,3 +193,38 @@ def deletar_usuario(request, user_id):
     usuario_obj.delete()
     messages.success(request, 'Usuário removido com sucesso.')
     return redirect('gerenciar_usuarios')
+
+    # Adicione a função para listar agendamentos do usuário e de gestão geral no agendamentos/views.py
+
+@login_required
+def meus_agendamentos(request):
+    agendamentos = Agendamento.objects.filter(usuario=request.user).order_by('-data_hora_inicio')
+    return render(request, 'agendamentos/meus_agendamentos.html', {'agendamentos': agendamentos})
+
+@login_required
+def gerenciar_agendamentos(request):
+    is_admin = request.user.is_superuser or (hasattr(request.user, 'perfil') and request.user.perfil.tipo == 'ADMIN')
+    if not is_admin:
+        messages.error(request, 'Acesso restrito a administradores.')
+        return redirect('home')
+
+    agendamentos = Agendamento.objects.all().select_related('usuario', 'computador').order_by('-data_hora_inicio')
+    return render(request, 'agendamentos/gerenciar_agendamentos.html', {'agendamentos': agendamentos})
+
+@login_required
+def cancelar_agendamento(request, agendamento_id):
+    agendamento = get_object_or_404(Agendamento, id=agendamento_id)
+    
+    is_admin = request.user.is_superuser or (hasattr(request.user, 'perfil') and request.user.perfil.tipo == 'ADMIN')
+    
+    # Apenas o dono da reserva ou um Admin podem cancelar
+    if agendamento.usuario == request.user or is_admin:
+        agendamento.status = 'CANCELADO'
+        agendamento.save()
+        messages.success(request, f'Agendamento de {agendamento.computador.identificador} foi cancelado.')
+    else:
+        messages.error(request, 'Você não tem permissão para cancelar este agendamento.')
+
+    if is_admin and request.GET.get('from') == 'admin':
+        return redirect('gerenciar_agendamentos')
+    return redirect('meus_agendamentos')

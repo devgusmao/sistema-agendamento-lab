@@ -12,15 +12,19 @@
         .btn-logout { background-color: #dc3545; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
         .container { padding: 2rem; max-width: 1200px; margin: 0 auto; }
         .admin-actions { background: white; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; display: flex; gap: 1rem; flex-wrap: wrap; }
-        .btn-action { background-color: #28a745; color: white; padding: 0.6rem 1.2rem; border-radius: 4px; text-decoration: none; font-weight: bold; }
+        .btn-action { background-color: #007bff; color: white; padding: 0.6rem 1.2rem; border-radius: 4px; text-decoration: none; font-weight: bold; }
+        .btn-action-success { background-color: #28a745; color: white; padding: 0.6rem 1.2rem; border-radius: 4px; text-decoration: none; font-weight: bold; }
         .btn-action-admin { background-color: #6f42c1; color: white; padding: 0.6rem 1.2rem; border-radius: 4px; text-decoration: none; font-weight: bold; }
         .btn-action-info { background-color: #17a2b8; color: white; padding: 0.6rem 1.2rem; border-radius: 4px; text-decoration: none; font-weight: bold; }
+        .btn-action-dark { background-color: #343a40; color: white; padding: 0.6rem 1.2rem; border-radius: 4px; text-decoration: none; font-weight: bold; }
         .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem; }
         .card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-top: 4px solid #007bff; }
         .badge { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: bold; color: white; }
         .bg-disponivel { background-color: #28a745; }
         .bg-manutencao { background-color: #ffc107; color: #333; }
         .bg-inativo { background-color: #dc3545; }
+        .btn-agendar { display: inline-block; margin-top: 1rem; width: 100%; text-align: center; background-color: #28a745; color: white; padding: 0.5rem 0; border-radius: 4px; text-decoration: none; font-weight: bold; }
+        .btn-agendar:hover { background-color: #218838; }
     </style>
 </head>
 <body>
@@ -44,15 +48,18 @@
             {% endfor %}
         {% endif %}
 
-        {% if is_gestor %}
-            <div class="admin-actions">
-                <a href="{% url 'cadastrar_computador' %}" class="btn-action">+ Cadastrar Nova Máquina</a>
+        <div class="admin-actions">
+            <a href="{% url 'meus_agendamentos' %}" class="btn-action-dark">📅 Meus Agendamentos</a>
+            {% if is_gestor %}
+                <a href="{% url 'cadastrar_laboratorio' %}" class="btn-action">+ Cadastrar Laboratório</a>
+                <a href="{% url 'cadastrar_computador' %}" class="btn-action-success">+ Cadastrar Nova Máquina</a>
                 {% if user.is_superuser or user.perfil.tipo == 'ADMIN' %}
+                    <a href="{% url 'gerenciar_agendamentos' %}" class="btn-action-info">📊 Todas as Reservas</a>
                     <a href="{% url 'liberar_usuarios' %}" class="btn-action-admin">🔑 Liberar Novos Usuários</a>
                     <a href="{% url 'gerenciar_usuarios' %}" class="btn-action-info">👥 Gerenciar Usuários</a>
                 {% endif %}
-            </div>
-        {% endif %}
+            {% endif %}
+        </div>
 
         <h2>Computadores Registrados</h2>
         
@@ -61,11 +68,15 @@
                 {% for pc in computadores %}
                     <div class="card">
                         <h3>{{ pc.identificador }}</h3>
+                        <p><strong>Laboratório:</strong> {{ pc.laboratorio.nome|default:"Não informado" }}</p>
                         <p><strong>Status:</strong> 
                             <span class="badge {% if pc.status == 'DISPONIVEL' %}bg-disponivel{% elif pc.status == 'MANUTENCAO' %}bg-manutencao{% else %}bg-inativo{% endif %}">
                                 {{ pc.get_status_display }}
                             </span>
                         </p>
+                        {% if pc.status == 'DISPONIVEL' %}
+                            <a href="{% url 'criar_agendamento' pc.id %}" class="btn-agendar">Reservar Máquina</a>
+                        {% endif %}
                     </div>
                 {% endfor %}
             </div>

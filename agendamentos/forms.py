@@ -1,7 +1,8 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from .models import Computador, Perfil
+from django.utils import timezone
+from .models import Computador, Perfil, Agendamento, Laboratorio
 
 class CustomUserCreationForm(UserCreationForm):
     email = forms.EmailField(
@@ -19,6 +20,19 @@ class CustomUserCreationForm(UserCreationForm):
         if User.objects.filter(email=email).exists():
             raise forms.ValidationError('Este e-mail já está cadastrado no sistema.')
         return email
+
+class LaboratorioForm(forms.ModelForm):
+    class Meta:
+        model = Laboratorio
+        fields = ['nome', 'capacidade']
+        labels = {
+            'nome': 'Nome do Laboratório',
+            'capacidade': 'Capacidade Máxima',
+        }
+        widgets = {
+            'nome': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Laboratório de Informática 01'}),
+            'capacidade': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 30'}),
+        }
 
 class ComputadorForm(forms.ModelForm):
     class Meta:
@@ -58,3 +72,33 @@ class EditarUsuarioForm(forms.ModelForm):
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
         }
+
+class AgendamentoForm(forms.ModelForm):
+    class Meta:
+        model = Agendamento
+        fields = ['data_hora_inicio', 'data_hora_fim']
+        labels = {
+            'data_hora_inicio': 'Início do Agendamento',
+            'data_hora_fim': 'Fim do Agendamento',
+        }
+        widgets = {
+            'data_hora_inicio': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'data_hora_fim': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        inicio = cleaned_data.get('data_hora_inicio')
+        fim = cleaned_data.get('data_hora_fim')
+
+        if inicio and fim:
+            # Tolerância de 5 minutos para trás para não travar o envio no mesmo minuto
+            agora_com_tolerancia = timezone.now() - timezone.timedelta(minutes=5)
+
+            if inicio < agora_com_tolerancia:
+                raise forms.ValidationError('A data de início do agendamento não pode ser no passado.')
+
+            if fim <= inicio:
+                raise forms.ValidationError('A data/hora de término deve ser posterior ao horário de início.')
+
+        return cleaned_data
