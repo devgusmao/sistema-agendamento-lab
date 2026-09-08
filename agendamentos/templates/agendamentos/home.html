@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel - Agendamento de Laboratórios</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 0; }
+        header { background-color: #007bff; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+        header h1 { margin: 0; font-size: 1.25rem; }
+        .user-info { display: flex; align-items: center; gap: 1rem; }
+        .btn-logout { background-color: #dc3545; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
+        .container { padding: 2rem; max-width: 1200px; margin: 0 auto; }
+        .admin-actions { background: white; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; display: flex; gap: 1rem; flex-wrap: wrap; }
+        .btn-action { background-color: #28a745; color: white; padding: 0.6rem 1.2rem; border-radius: 4px; text-decoration: none; font-weight: bold; }
+        .btn-action-admin { background-color: #6f42c1; color: white; padding: 0.6rem 1.2rem; border-radius: 4px; text-decoration: none; font-weight: bold; }
+        .btn-action-info { background-color: #17a2b8; color: white; padding: 0.6rem 1.2rem; border-radius: 4px; text-decoration: none; font-weight: bold; }
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem; }
+        .card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-top: 4px solid #007bff; }
+        .badge { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: bold; color: white; }
+        .bg-disponivel { background-color: #28a745; }
+        .bg-manutencao { background-color: #ffc107; color: #333; }
+        .bg-inativo { background-color: #dc3545; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Painel de Agendamento</h1>
+        <div class="user-info">
+            <span>Olá, {{ user.username }}</span>
+            <form action="{% url 'logout' %}" method="post" style="margin: 0;">
+                {% csrf_token %}
+                <button type="submit" class="btn-logout">Sair</button>
+            </form>
+        </div>
+    </header>
+
+    <div class="container">
+        {% if messages %}
+            {% for message in messages %}
+                <div style="padding: 1rem; background-color: #d4edda; color: #155724; border-radius: 4px; margin-bottom: 1rem;">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% if is_gestor %}
+            <div class="admin-actions">
+                <a href="{% url 'cadastrar_computador' %}" class="btn-action">+ Cadastrar Nova Máquina</a>
+                {% if user.is_superuser or user.perfil.tipo == 'ADMIN' %}
+                    <a href="{% url 'liberar_usuarios' %}" class="btn-action-admin">🔑 Liberar Novos Usuários</a>
+                    <a href="{% url 'gerenciar_usuarios' %}" class="btn-action-info">👥 Gerenciar Usuários</a>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        <h2>Computadores Registrados</h2>
+        
+        {% if computadores %}
+            <div class="card-grid">
+                {% for pc in computadores %}
+                    <div class="card">
+                        <h3>{{ pc.identificador }}</h3>
+                        <p><strong>Status:</strong> 
+                            <span class="badge {% if pc.status == 'DISPONIVEL' %}bg-disponivel{% elif pc.status == 'MANUTENCAO' %}bg-manutencao{% else %}bg-inativo{% endif %}">
+                                {{ pc.get_status_display }}
+                            </span>
+                        </p>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>Nenhum computador cadastrado no sistema até o momento.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

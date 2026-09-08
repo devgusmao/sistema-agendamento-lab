@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Acesso Pendente</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f6f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; max-width: 400px; }
+        .btn-logout { background-color: #dc3545; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; margin-top: 1rem; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>⏳ Cadastro Pendente de Liberação</h2>
+        <p>Sua conta foi criada com sucesso, mas precisa ser aprovada por um Administrador antes de realizar agendamentos.</p>
+        <p><small>Entre em contato com o responsável pelo laboratório.</small></p>
+        <form action="{% url 'logout' %}" method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn-logout">Sair do Sistema</button>
+        </form>
+    </div>
+</body>
+</html>

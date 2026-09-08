@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Painel de Liberação de Usuários</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 2rem; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 2rem; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 0.75rem; border-bottom: 1px solid #ddd; text-align: left; }
+        th { background-color: #f8f9fa; }
+        .btn-aprovar { background-color: #28a745; color: white; padding: 0.4rem 0.8rem; border-radius: 4px; text-decoration: none; font-size: 0.85rem; }
+        .btn-voltar { display: inline-block; margin-bottom: 1rem; color: #007bff; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="{% url 'home' %}" class="btn-voltar">← Voltar para o Painel Principal</a>
+        <h2>Aprovação de Novos Usuários</h2>
+
+        <h3>Usuários Aguardando Liberação</h3>
+        {% if pendentes %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Usuário</th>
+                        <th>E-mail</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in pendentes %}
+                        <tr>
+                            <td>{{ p.usuario.username }}</td>
+                            <td>{{ p.usuario.email }}</td>
+                            <td><a href="{% url 'aprovar_usuario' p.id %}" class="btn-aprovar">Aprovar Acesso</a></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>Nenhum usuário pendente no momento.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

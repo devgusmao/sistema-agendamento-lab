@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro - Agendamento de Laboratórios</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f6f9; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 1rem; box-sizing: border-box; }
+        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        .card h2 { margin-bottom: 1.5rem; text-align: center; color: #333; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; color: #666; font-weight: bold; }
+        .form-group input { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .helptext { font-size: 0.75rem; color: #888; display: block; margin-top: 0.25rem; line-height: 1.3; }
+        .errorlist { color: red; font-size: 0.85rem; padding-left: 1rem; margin-top: 0.25rem; }
+        .btn { width: 100%; padding: 0.75rem; background-color: #28a745; border: none; color: white; border-radius: 4px; cursor: pointer; font-size: 1rem; margin-top: 1rem; }
+        .btn:hover { background-color: #218838; }
+        .login-link { text-align: center; margin-top: 1rem; display: block; color: #007bff; text-decoration: none; font-size: 0.9rem; }
+        .login-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Criar Conta</h2>
+
+        <form method="post">
+            {% csrf_token %}
+
+            {% if form.errors %}
+                <ul class="errorlist">
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                            <li>{{ field.label }}: {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                    {% for error in form.non_field_errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+            <div class="form-group">
+                <label for="id_username">Usuário / Matrícula</label>
+                <input type="text" name="username" id="id_username" required autofocus value="{{ form.username.value|default:'' }}">
+                <span class="helptext">Obrigatório. Máximo de 150 caracteres (letras, números e @/./+/-/_).</span>
+            </div>
+
+            <div class="form-group">
+                <label for="id_email">E-mail Institucional</label>
+                <input type="email" name="email" id="id_email" required value="{{ form.email.value|default:'' }}">
+                <span class="helptext">Endereço de e-mail institucional obrigatório.</span>
+            </div>
+
+            <div class="form-group">
+                <label for="id_password1">Senha</label>
+                <input type="password" name="password1" id="id_password1" required>
+                <span class="helptext">A senha deve ter pelo menos 8 caracteres e não ser totalmente numérica.</span>
+            </div>
+
+            <div class="form-group">
+                <label for="id_password2">Confirme a Senha</label>
+                <input type="password" name="password2" id="id_password2" required>
+                <span class="helptext">Digite a mesma senha para verificação.</span>
+            </div>
+
+            <button type="submit" class="btn">Cadastrar</button>
+        </form>
+
+        <a href="{% url 'login' %}" class="login-link">Já tem uma conta? Faça login</a>
+    </div>
+</body>
+</html>
