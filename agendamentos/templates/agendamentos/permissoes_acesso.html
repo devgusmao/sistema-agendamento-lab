@@ -1,0 +1,117 @@
+{% extends 'agendamentos/base.html' %}
+
+{% block title %}Permissões de Acesso{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header { margin-bottom: 2rem; }
+    .page-header h1 { margin: 0; font-size: 1.5rem; color: #0f172a; }
+    .page-header p { margin: 0.25rem 0 0; color: #64748b; font-size: 0.9rem; }
+
+    .table-card {
+        background: white; 
+        border-radius: 10px; 
+        border: 1px solid #e2e8f0; 
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
+        overflow: hidden;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 1rem 1.25rem; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; }
+    th { background-color: #f8fafc; font-weight: 600; color: #475569; }
+
+    .user-info-text { font-weight: 600; color: #0f172a; }
+    .user-email-text { font-size: 0.8rem; color: #64748b; display: block; }
+
+    .select-tipo {
+        padding: 0.4rem 0.6rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        background-color: #f8fafc;
+        color: #334155;
+    }
+
+    .btn-salvar {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 0.4rem 0.8rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-left: 0.5rem;
+    }
+    .btn-salvar:hover { background-color: var(--primary-hover); }
+
+    .badge-role {
+        display: inline-block;
+        padding: 0.25rem 0.6rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: bold;
+    }
+    .role-admin { background-color: #fef3c7; color: #92400e; }
+    .role-tecnico { background-color: #e0f2fe; color: #0369a1; }
+    .role-aluno { background-color: #f1f5f9; color: #475569; }
+    .tag-superuser { font-size: 0.75rem; color: #2563eb; font-weight: bold; margin-left: 0.3rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Permissões de Acesso</h1>
+    <p>Gerencie o tipo de perfil e os privilégios dos usuários no sistema.</p>
+</div>
+
+<div class="table-card">
+    {% if perfis %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Usuário</th>
+                    <th>Perfil Atual</th>
+                    <th>Alterar Nível de Permissão</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in perfis %}
+                    <tr>
+                        <td>
+                            <span class="user-info-text">{{ p.usuario.username }}</span>
+                            {% if p.usuario.is_superuser %}
+                                <span class="tag-superuser">(Superuser)</span>
+                            {% endif %}
+                            <span class="user-email-text">{{ p.usuario.email|default:"Sem e-mail" }}</span>
+                        </td>
+                        <td>
+                            {% if p.usuario.is_superuser %}
+                                <span class="badge-role role-admin">Administrador Master</span>
+                            {% else %}
+                                <span class="badge-role {% if p.tipo == 'ADMIN' %}role-admin{% elif p.tipo == 'TECNICO' %}role-tecnico{% else %}role-aluno{% endif %}">
+                                    {{ p.get_tipo_display }}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form method="post" style="display: flex; align-items: center; margin: 0;">
+                                {% csrf_token %}
+                                <input type="hidden" name="perfil_id" value="{{ p.id }}">
+                                <select name="novo_tipo" class="select-tipo">
+                                    <option value="ALUNO" {% if p.tipo == 'ALUNO' %}selected{% endif %}>Aluno / Comunidade</option>
+                                    <option value="TECNICO" {% if p.tipo == 'TECNICO' %}selected{% endif %}>Técnico</option>
+                                    <option value="ADMIN" {% if p.tipo == 'ADMIN' %}selected{% endif %}>Administrador</option>
+                                </select>
+                                <button type="submit" class="btn-salvar">Atualizar</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p style="padding: 2rem; margin: 0; color: #64748b;">Nenhum perfil encontrado.</p>
+    {% endif %}
+</div>
+{% endblock %}

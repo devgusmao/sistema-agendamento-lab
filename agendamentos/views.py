@@ -3,6 +3,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.db.models import Prefetch
+from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone  
 from .forms import CustomUserCreationForm, ComputadorForm, EditarUsuarioForm, AgendamentoForm, LaboratorioForm
 from .models import Computador, Laboratorio, Perfil, Agendamento
@@ -364,3 +365,24 @@ def listar_computadores(request):
 
     computadores = Computador.objects.all().select_related('laboratorio').order_by('identificador')
     return render(request, 'agendamentos/computadores.html', {'computadores': computadores})
+
+@login_required
+def permissoes_acesso(request):
+    is_admin = request.user.is_superuser or (hasattr(request.user, 'perfil') and request.user.perfil.tipo == 'ADMIN')
+    if not is_admin:
+        messages.error(request, 'Acesso restrito para administradores.')
+        return redirect('home')
+
+    if request.method == 'POST':
+        perfil_id = request.POST.get('perfil_id')
+        novo_tipo = request.POST.get('novo_tipo')
+        
+        perfil = get_object_or_404(Perfil, id=perfil_id)
+        perfil.tipo = novo_tipo
+        perfil.save()
+        messages.success(request, f'Permissão de {perfil.usuario.username} atualizada para {perfil.get_tipo_display()}.')
+            
+        return redirect('permissoes_acesso')
+
+    perfis = Perfil.objects.select_related('usuario').order_by('tipo', 'usuario__username')
+    return render(request, 'agendamentos/permissoes_acesso.html', {'perfis': perfis})

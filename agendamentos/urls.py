@@ -23,4 +23,5 @@ urlpatterns = [
     path('laboratorios/cadastrar/', views.cadastrar_laboratorio, name='cadastrar_laboratorio'),
     path('laboratorios/<int:laboratorio_id>/editar/', views.editar_laboratorio, name='editar_laboratorio'),
     path('computadores/', views.listar_computadores, name='listar_computadores'),
+    path('permissoes/', views.permissoes_acesso, name='permissoes_acesso'),
 ]

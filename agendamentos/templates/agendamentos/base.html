@@ -172,8 +172,14 @@
                     <li>
                         <a href="{% url 'gerenciar_usuarios' %}">👥 Gerenciar Usuários</a>
                     </li>
+                    
                 {% endif %}
             {% endif %}
+            {% if user.is_superuser or user.perfil.tipo == 'ADMIN' %}
+    <li>
+        <a href="{% url 'permissoes_acesso' %}">🛡️ Permissões de Acesso</a>
+    </li>
+{% endif %}
         </ul>
 
         <div class="sidebar-footer">
