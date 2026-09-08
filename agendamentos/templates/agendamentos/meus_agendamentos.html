@@ -1,68 +1,71 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <title>Meus Agendamentos</title>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 2rem; }
-        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
-        th, td { padding: 0.75rem; border-bottom: 1px solid #ddd; text-align: left; }
-        th { background-color: #f8f9fa; }
-        .badge { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: bold; color: white; }
-        .bg-confirmado { background-color: #28a745; }
-        .bg-cancelado { background-color: #dc3545; }
-        .btn-cancel { background-color: #dc3545; color: white; padding: 0.3rem 0.6rem; border-radius: 4px; text-decoration: none; font-size: 0.85rem; }
-        .btn-voltar { display: inline-block; margin-bottom: 1rem; color: #007bff; text-decoration: none; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <a href="{% url 'home' %}" class="btn-voltar">← Voltar para o Painel Principal</a>
-        <h2>Minhas Reservas</h2>
+{% extends 'agendamentos/base.html' %}
 
-        {% if messages %}
-            {% for message in messages %}
-                <p style="color: green; font-weight: bold;">{{ message }}</p>
-            {% endfor %}
-        {% endif %}
+{% block title %}Meus Agendamentos{% endblock %}
 
-        {% if agendamentos %}
-            <table>
-                <thead>
+{% block extra_css %}
+<style>
+    .page-header { margin-bottom: 2rem; }
+    .page-header h1 { margin: 0; font-size: 1.5rem; color: #0f172a; }
+
+    .table-card {
+        background: white; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 1rem 1.25rem; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; }
+    th { background-color: #f8fafc; font-weight: 600; color: #475569; }
+
+    .badge-status { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
+    .status-confirmado { background-color: #dcfce7; color: #166534; }
+    .status-cancelado { background-color: #fee2e2; color: #991b1b; }
+
+    .btn-cancelar { color: #ef4444; text-decoration: none; font-weight: 600; font-size: 0.85rem; }
+    .btn-cancelar:hover { text-decoration: underline; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Meus Agendamentos</h1>
+</div>
+
+<div class="table-card">
+    {% if agendamentos %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Computador</th>
+                    <th>Laboratório</th>
+                    <th>Início</th>
+                    <th>Término</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in agendamentos %}
                     <tr>
-                        <th>Máquina</th>
-                        <th>Início</th>
-                        <th>Fim</th>
-                        <th>Status</th>
-                        <th>Ações</th>
+                        <td><strong>{{ a.computador.identificador }}</strong></td>
+                        <td>{{ a.computador.laboratorio.nome|default:"-" }}</td>
+                        <td>{{ a.data_hora_inicio|date:"d/m/Y H:i" }}</td>
+                        <td>{{ a.data_hora_fim|date:"d/m/Y H:i" }}</td>
+                        <td>
+                            <span class="badge-status {% if a.status == 'CONFIRMADO' %}status-confirmado{% else %}status-cancelado{% endif %}">
+                                {{ a.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if a.status == 'CONFIRMADO' %}
+                                <a href="{% url 'cancelar_agendamento' a.id %}" class="btn-cancelar" onclick="return confirm('Tem certeza que deseja cancelar esta reserva?')">Cancelar</a>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
                     </tr>
-                </thead>
-                <tbody>
-                    {% for a in agendamentos %}
-                        <tr>
-                            <td><strong>{{ a.computador.identificador }}</strong></td>
-                            <td>{{ a.data_hora_inicio|date:"d/m/Y H:i" }}</td>
-                            <td>{{ a.data_hora_fim|date:"d/m/Y H:i" }}</td>
-                            <td>
-                                <span class="badge {% if a.status == 'CONFIRMADO' %}bg-confirmado{% else %}bg-cancelado{% endif %}">
-                                    {{ a.get_status_display }}
-                                </span>
-                            </td>
-                            <td>
-                                {% if a.status == 'CONFIRMADO' %}
-                                    <a href="{% url 'cancelar_agendamento' a.id %}" class="btn-cancel" onclick="return confirm('Deseja cancelar esta reserva?')">Cancelar</a>
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% else %}
-            <p>Você ainda não possui reservas efetuadas.</p>
-        {% endif %}
-    </div>
-</body>
-</html>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p style="padding: 2rem; margin: 0; color: #64748b;">Você ainda não possui nenhum agendamento realizado.</p>
+    {% endif %}
+</div>
+{% endblock %}

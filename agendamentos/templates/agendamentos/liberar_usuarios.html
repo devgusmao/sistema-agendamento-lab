@@ -1,46 +1,70 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <title>Painel de Liberação de Usuários</title>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 2rem; }
-        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 2rem; border-radius: 8px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-        th, td { padding: 0.75rem; border-bottom: 1px solid #ddd; text-align: left; }
-        th { background-color: #f8f9fa; }
-        .btn-aprovar { background-color: #28a745; color: white; padding: 0.4rem 0.8rem; border-radius: 4px; text-decoration: none; font-size: 0.85rem; }
-        .btn-voltar { display: inline-block; margin-bottom: 1rem; color: #007bff; text-decoration: none; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <a href="{% url 'home' %}" class="btn-voltar">← Voltar para o Painel Principal</a>
-        <h2>Aprovação de Novos Usuários</h2>
+{% extends 'agendamentos/base.html' %}
 
-        <h3>Usuários Aguardando Liberação</h3>
-        {% if pendentes %}
-            <table>
-                <thead>
+{% block title %}Aprovação de Usuários{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header { margin-bottom: 2rem; }
+    .page-header h1 { margin: 0; font-size: 1.5rem; color: #0f172a; }
+    .page-header p { margin: 0.25rem 0 0; color: #64748b; font-size: 0.9rem; }
+
+    .table-card {
+        background: white; 
+        border-radius: 10px; 
+        border: 1px solid #e2e8f0; 
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
+        overflow: hidden;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 1rem 1.25rem; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; }
+    th { background-color: #f8fafc; font-weight: 600; color: #475569; }
+
+    .btn-aprovar { 
+        background-color: #16a34a; 
+        color: white; 
+        padding: 0.4rem 0.8rem; 
+        border-radius: 6px; 
+        text-decoration: none; 
+        font-weight: 600; 
+        font-size: 0.8rem; 
+        transition: background 0.2s;
+        display: inline-block;
+    }
+    .btn-aprovar:hover { background-color: #15803d; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Aprovação de Novos Usuários</h1>
+    <p>Libere o acesso dos cadastros pendentes para uso do sistema.</p>
+</div>
+
+<div class="table-card">
+    {% if pendentes %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Usuário</th>
+                    <th>E-mail</th>
+                    <th>Ação</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in pendentes %}
                     <tr>
-                        <th>Usuário</th>
-                        <th>E-mail</th>
-                        <th>Ação</th>
+                        <td><strong>{{ p.usuario.username }}</strong></td>
+                        <td>{{ p.usuario.email|default:"Sem e-mail cadastrado" }}</td>
+                        <td>
+                            <a href="{% url 'aprovar_usuario' p.id %}" class="btn-aprovar">Aprovar Acesso</a>
+                        </td>
                     </tr>
-                </thead>
-                <tbody>
-                    {% for p in pendentes %}
-                        <tr>
-                            <td>{{ p.usuario.username }}</td>
-                            <td>{{ p.usuario.email }}</td>
-                            <td><a href="{% url 'aprovar_usuario' p.id %}" class="btn-aprovar">Aprovar Acesso</a></td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% else %}
-            <p>Nenhum usuário pendente no momento.</p>
-        {% endif %}
-    </div>
-</body>
-</html>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p style="padding: 2rem; margin: 0; color: #64748b;">Nenhum usuário pendente no momento.</p>
+    {% endif %}
+</div>
+{% endblock %}

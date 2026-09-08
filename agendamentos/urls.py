@@ -9,6 +9,7 @@ urlpatterns = [
     path('cadastrar/', views.cadastrar, name='cadastrar'),
     path('laboratorios/novo/', views.cadastrar_laboratorio, name='cadastrar_laboratorio'),
     path('computadores/novo/', views.cadastrar_computador, name='cadastrar_computador'),
+    path('computadores/editar/<int:computador_id>/', views.editar_computador, name='editar_computador'),
     path('agendar/<int:computador_id>/', views.criar_agendamento, name='criar_agendamento'),
     path('meus-agendamentos/', views.meus_agendamentos, name='meus_agendamentos'),
     path('gestao/agendamentos/', views.gerenciar_agendamentos, name='gerenciar_agendamentos'),
@@ -18,4 +19,8 @@ urlpatterns = [
     path('gestao/usuarios/', views.gerenciar_usuarios, name='gerenciar_usuarios'),
     path('gestao/usuarios/editar/<int:user_id>/', views.editar_usuario, name='editar_usuario'),
     path('gestao/usuarios/deletar/<int:user_id>/', views.deletar_usuario, name='deletar_usuario'),
+    path('laboratorios/', views.listar_laboratorios, name='listar_laboratorios'),
+    path('laboratorios/cadastrar/', views.cadastrar_laboratorio, name='cadastrar_laboratorio'),
+    path('laboratorios/<int:laboratorio_id>/editar/', views.editar_laboratorio, name='editar_laboratorio'),
+    path('computadores/', views.listar_computadores, name='listar_computadores'),
 ]

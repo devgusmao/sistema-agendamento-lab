@@ -1,0 +1,68 @@
+{% extends 'agendamentos/base.html' %}
+
+{% block title %}Laboratórios{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+    .page-header h1 { margin: 0; font-size: 1.5rem; color: #0f172a; }
+
+    .btn-novo {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 0.6rem 1.2rem;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    .btn-novo:hover { background-color: var(--primary-hover); }
+
+    .table-card {
+        background: white; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 1rem 1.25rem; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; }
+    th { background-color: #f8fafc; font-weight: 600; color: #475569; }
+
+    .btn-editar { color: #2563eb; text-decoration: none; font-weight: 600; }
+    .btn-editar:hover { text-decoration: underline; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Laboratórios</h1>
+        <p style="margin: 0.25rem 0 0; color: #64748b; font-size: 0.9rem;">Gerencie os espaços físicos do sistema.</p>
+    </div>
+    <a href="{% url 'cadastrar_laboratorio' %}" class="btn-novo">+ Novo Laboratório</a>
+</div>
+
+<div class="table-card">
+    {% if laboratorios %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Capacidade Máxima</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lab in laboratorios %}
+                    <tr>
+                        <td><strong>{{ lab.nome }}</strong></td>
+                        <td>{{ lab.capacidade }} computadores</td>
+                        <td>
+                            <a href="{% url 'editar_laboratorio' lab.id %}" class="btn-editar">✏️ Editar</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p style="padding: 2rem; margin: 0; color: #64748b;">Nenhum laboratório cadastrado.</p>
+    {% endif %}
+</div>
+{% endblock %}

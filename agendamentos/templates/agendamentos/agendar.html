@@ -3,16 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <title>Reservar Computador</title>
+    <!-- Estilos do Flatpickr -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f6f9; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
         .form-group { margin-bottom: 1rem; }
         .form-group label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
-        .form-control { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        .btn { width: 100%; padding: 0.75rem; background-color: #28a745; border: none; color: white; border-radius: 4px; cursor: pointer; font-size: 1rem; margin-top: 1rem; }
+        .form-control { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; background-color: white; }
+        .btn { width: 100%; padding: 0.75rem; background-color: #28a745; border: none; color: white; border-radius: 4px; cursor: pointer; font-size: 1rem; margin-top: 1rem; font-weight: bold; }
         .btn:hover { background-color: #218838; }
         .btn-voltar { display: block; text-align: center; margin-top: 1rem; color: #666; text-decoration: none; }
         .errorlist { color: red; font-size: 0.85rem; padding-left: 1rem; }
+        
+        .bloqueados-box { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.85rem; }
+        .bloqueados-box strong { display: block; margin-bottom: 0.4rem; font-size: 0.9rem; }
+        .bloqueados-list { list-style: none; padding: 0; margin: 0; }
+        .bloqueados-list li { background: #ffe8a1; padding: 0.25rem 0.5rem; border-radius: 3px; margin-bottom: 0.3rem; font-weight: bold; }
+        
+        .info-regra { font-size: 0.85rem; color: #555; background-color: #e9ecef; padding: 0.6rem; border-radius: 6px; margin-bottom: 1.2rem; border-left: 4px solid #007bff; }
     </style>
 </head>
 <body>
@@ -22,9 +33,26 @@
 
         {% if messages %}
             {% for message in messages %}
-                <p style="color: red; font-size: 0.9rem;">{{ message }}</p>
+                <p style="color: red; font-weight: bold; font-size: 0.9rem;">{{ message }}</p>
             {% endfor %}
         {% endif %}
+
+        <div class="info-regra">
+            ℹ️ <strong>Regra:</strong> O limite máximo de tempo por reserva é de <strong>2 horas</strong>. O horário final é preenchido automaticamente, mas você pode ajustá-lo para menos.
+        </div>
+
+        <div class="bloqueados-box">
+            <strong>🚫 Horários Indisponíveis (Já Reservados):</strong>
+            {% if reservas_existentes %}
+                <ul class="bloqueados-list">
+                    {% for r in reservas_existentes %}
+                        <li>{{ r.data_hora_inicio|date:"d/m/Y H:i" }} até {{ r.data_hora_fim|date:"H:i" }}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <span style="color: #155724;">Esta máquina está totalmente livre!</span>
+            {% endif %}
+        </div>
 
         <form method="post">
             {% csrf_token %}
@@ -53,5 +81,53 @@
         </form>
         <a href="{% url 'home' %}" class="btn-voltar">Cancelar</a>
     </div>
+
+    <!-- Passa as reservas em JSON para o Flatpickr -->
+    {{ reservas_json|json_script:"reservas-data" }}
+
+    <!-- Scripts do Flatpickr -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.flatpickr/dist/l10n/pt.js"></script>
+    
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const scriptElement = document.getElementById('reservas-data');
+            const reservas = scriptElement ? JSON.parse(scriptElement.textContent) : [];
+
+            const intervalosBloqueados = reservas.map(r => ({
+                from: r.from,
+                to: r.to
+            }));
+
+            const configBase = {
+                enableTime: true,
+                dateFormat: "Y-m-d H:i",
+                altInput: true,
+                altFormat: "d/m/Y H:i",
+                time_24hr: true,
+                minDate: "today",
+                locale: "pt",
+                disable: intervalosBloqueados
+            };
+
+            // Inicializa o seletor de término primeiro
+            const pickerFim = flatpickr("#id_data_hora_fim", configBase);
+
+            // Inicializa o seletor de início com atualização via onClose
+            flatpickr("#id_data_hora_inicio", {
+                ...configBase,
+                onClose: function(selectedDates) {
+                    if (selectedDates.length > 0) {
+                        const dataInicio = selectedDates[0];
+                        // Soma exatamente 2 horas (2 * 60 min * 60 seg * 1000 ms)
+                        const dataFimSugerida = new Date(dataInicio.getTime() + (2 * 60 * 60 * 1000));
+                        
+                        // Atualiza o valor no seletor de fim
+                        pickerFim.setDate(dataFimSugerida, true);
+                    }
+                }
+            });
+        });
+    </script>
 </body>
 </html>

@@ -82,8 +82,8 @@ class AgendamentoForm(forms.ModelForm):
             'data_hora_fim': 'Fim do Agendamento',
         }
         widgets = {
-            'data_hora_inicio': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
-            'data_hora_fim': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'data_hora_inicio': forms.DateTimeInput(attrs={'class': 'form-control', 'placeholder': 'Selecione a data e hora de início'}),
+            'data_hora_fim': forms.DateTimeInput(attrs={'class': 'form-control', 'placeholder': 'Selecione a data e hora de término'}),
         }
 
     def clean(self):
@@ -92,13 +92,19 @@ class AgendamentoForm(forms.ModelForm):
         fim = cleaned_data.get('data_hora_fim')
 
         if inicio and fim:
-            # Tolerância de 5 minutos para trás para não travar o envio no mesmo minuto
+            # 1. Tolerância de 5 minutos para trás para evitar problemas de fuso/envio
             agora_com_tolerancia = timezone.now() - timezone.timedelta(minutes=5)
 
             if inicio < agora_com_tolerancia:
                 raise forms.ValidationError('A data de início do agendamento não pode ser no passado.')
 
+            # 2. Valida se o término é posterior ao início
             if fim <= inicio:
                 raise forms.ValidationError('A data/hora de término deve ser posterior ao horário de início.')
+
+            # 3. VALIDAÇÃO DE LIMITE MÁXIMO DE 2 HORAS
+            duracao = fim - inicio
+            if duracao > timezone.timedelta(hours=2):
+                raise forms.ValidationError('O tempo máximo permitido por reserva é de 2 horas.')
 
         return cleaned_data

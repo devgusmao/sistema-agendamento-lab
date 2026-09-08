@@ -1,88 +1,137 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel - Agendamento de Laboratórios</title>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 0; }
-        header { background-color: #007bff; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
-        header h1 { margin: 0; font-size: 1.25rem; }
-        .user-info { display: flex; align-items: center; gap: 1rem; }
-        .btn-logout { background-color: #dc3545; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
-        .container { padding: 2rem; max-width: 1200px; margin: 0 auto; }
-        .admin-actions { background: white; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; display: flex; gap: 1rem; flex-wrap: wrap; }
-        .btn-action { background-color: #007bff; color: white; padding: 0.6rem 1.2rem; border-radius: 4px; text-decoration: none; font-weight: bold; }
-        .btn-action-success { background-color: #28a745; color: white; padding: 0.6rem 1.2rem; border-radius: 4px; text-decoration: none; font-weight: bold; }
-        .btn-action-admin { background-color: #6f42c1; color: white; padding: 0.6rem 1.2rem; border-radius: 4px; text-decoration: none; font-weight: bold; }
-        .btn-action-info { background-color: #17a2b8; color: white; padding: 0.6rem 1.2rem; border-radius: 4px; text-decoration: none; font-weight: bold; }
-        .btn-action-dark { background-color: #343a40; color: white; padding: 0.6rem 1.2rem; border-radius: 4px; text-decoration: none; font-weight: bold; }
-        .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem; }
-        .card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-top: 4px solid #007bff; }
-        .badge { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: bold; color: white; }
-        .bg-disponivel { background-color: #28a745; }
-        .bg-manutencao { background-color: #ffc107; color: #333; }
-        .bg-inativo { background-color: #dc3545; }
-        .btn-agendar { display: inline-block; margin-top: 1rem; width: 100%; text-align: center; background-color: #28a745; color: white; padding: 0.5rem 0; border-radius: 4px; text-decoration: none; font-weight: bold; }
-        .btn-agendar:hover { background-color: #218838; }
-    </style>
-</head>
-<body>
-    <header>
-        <h1>Painel de Agendamento</h1>
-        <div class="user-info">
-            <span>Olá, {{ user.username }}</span>
-            <form action="{% url 'logout' %}" method="post" style="margin: 0;">
-                {% csrf_token %}
-                <button type="submit" class="btn-logout">Sair</button>
-            </form>
-        </div>
-    </header>
+{% extends 'agendamentos/base.html' %}
 
-    <div class="container">
-        {% if messages %}
-            {% for message in messages %}
-                <div style="padding: 1rem; background-color: #d4edda; color: #155724; border-radius: 4px; margin-bottom: 1rem;">
-                    {{ message }}
-                </div>
-            {% endfor %}
+{% block title %}Painel - Disponibilidade de Máquinas{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header { margin-bottom: 2rem; }
+    .page-header h1 { margin: 0; font-size: 1.5rem; color: #0f172a; }
+    .page-header p { margin: 0.25rem 0 0; color: #64748b; font-size: 0.9rem; }
+
+    .filter-card {
+        background: var(--card-bg);
+        padding: 1.25rem;
+        border-radius: 10px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        margin-bottom: 2rem;
+        border: 1px solid #e2e8f0;
+    }
+
+    .filter-form { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; }
+    .form-group-filter { flex: 1; min-width: 180px; }
+    .form-group-filter label { display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.35rem; color: #475569; }
+    .form-group-filter input, .form-group-filter select {
+        width: 100%; padding: 0.55rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.9rem;
+    }
+
+    .btn-filter { background-color: var(--primary-color); color: white; border: none; padding: 0.6rem 1.25rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .btn-filter:hover { background-color: var(--primary-hover); }
+    .btn-clear { background-color: #e2e8f0; color: #475569; text-decoration: none; padding: 0.6rem 1rem; border-radius: 6px; font-size: 0.9rem; font-weight: 600; }
+
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+    .card {
+        background: var(--card-bg); padding: 1.5rem; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: space-between; transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+    .card-title { margin: 0; font-size: 1.1rem; color: #0f172a; }
+
+    .badge { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
+    .bg-disponivel { background-color: #dcfce7; color: #166534; }
+    .bg-manutencao { background-color: #fef3c7; color: #92400e; }
+    .bg-inativo { background-color: #fee2e2; color: #991b1b; }
+
+    .reservas-box { margin-top: 1rem; background-color: #f1f5f9; border-radius: 6px; padding: 0.75rem; font-size: 0.85rem; }
+    .reservas-box strong { display: block; margin-bottom: 0.4rem; color: #475569; }
+    .reservas-list { list-style: none; padding: 0; margin: 0; max-height: 90px; overflow-y: auto; }
+    .reservas-list li { background: #ffffff; padding: 0.3rem 0.5rem; border-radius: 4px; margin-bottom: 0.3rem; border: 1px solid #e2e8f0; color: #334155; }
+
+    .btn-agendar { display: block; margin-top: 1rem; width: 100%; text-align: center; background-color: #16a34a; color: white; padding: 0.6rem 0; border-radius: 6px; text-decoration: none; font-weight: 600; }
+    .btn-agendar:hover { background-color: #15803d; }
+    .btn-editar-pc { display: block; text-align: center; margin-top: 0.5rem; color: #2563eb; text-decoration: none; font-size: 0.85rem; font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Disponibilidade de Computadores</h1>
+    <p>Selecione um laboratório e reserve o horário desejado.</p>
+</div>
+
+<!-- Barra de Filtros -->
+<div class="filter-card">
+    <form method="get" class="filter-form">
+        <div class="form-group-filter">
+            <label>Buscar Máquina</label>
+            <input type="text" name="busca" placeholder="Ex: PC-01 ou EVO" value="{{ busca }}">
+        </div>
+        <div class="form-group-filter">
+            <label>Laboratório</label>
+            <select name="laboratorio">
+                <option value="">Todos os Laboratórios</option>
+                {% for lab in laboratorios %}
+                    <option value="{{ lab.id }}" {% if lab_id == lab.id|stringformat:"i" %}selected{% endif %}>{{ lab.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group-filter">
+            <label>Status</label>
+            <select name="status">
+                <option value="">Todos os Status</option>
+                <option value="DISPONIVEL" {% if status_filtro == 'DISPONIVEL' %}selected{% endif %}>Disponível</option>
+                <option value="MANUTENCAO" {% if status_filtro == 'MANUTENCAO' %}selected{% endif %}>Em Manutenção</option>
+                <option value="INATIVO" {% if status_filtro == 'INATIVO' %}selected{% endif %}>Inativo</option>
+            </select>
+        </div>
+        <button type="submit" class="btn-filter">Filtrar</button>
+        {% if busca or lab_id or status_filtro %}
+            <a href="{% url 'home' %}" class="btn-clear">Limpar</a>
         {% endif %}
+    </form>
+</div>
 
-        <div class="admin-actions">
-            <a href="{% url 'meus_agendamentos' %}" class="btn-action-dark">📅 Meus Agendamentos</a>
-            {% if is_gestor %}
-                <a href="{% url 'cadastrar_laboratorio' %}" class="btn-action">+ Cadastrar Laboratório</a>
-                <a href="{% url 'cadastrar_computador' %}" class="btn-action-success">+ Cadastrar Nova Máquina</a>
-                {% if user.is_superuser or user.perfil.tipo == 'ADMIN' %}
-                    <a href="{% url 'gerenciar_agendamentos' %}" class="btn-action-info">📊 Todas as Reservas</a>
-                    <a href="{% url 'liberar_usuarios' %}" class="btn-action-admin">🔑 Liberar Novos Usuários</a>
-                    <a href="{% url 'gerenciar_usuarios' %}" class="btn-action-info">👥 Gerenciar Usuários</a>
-                {% endif %}
-            {% endif %}
-        </div>
+<!-- Grid de Computadores -->
+{% if computadores %}
+    <div class="card-grid">
+        {% for pc in computadores %}
+            <div class="card">
+                <div>
+                    <div class="card-header">
+                        <h3 class="card-title">{{ pc.identificador }}</h3>
+                        <span class="badge {% if pc.status == 'DISPONIVEL' %}bg-disponivel{% elif pc.status == 'MANUTENCAO' %}bg-manutencao{% else %}bg-inativo{% endif %}">
+                            {{ pc.get_status_display }}
+                        </span>
+                    </div>
+                    <p style="margin: 0 0 0.5rem 0; font-size: 0.9rem; color: #64748b;">
+                        <strong>Laboratório:</strong> {{ pc.laboratorio.nome|default:"Não informado" }}
+                    </p>
 
-        <h2>Computadores Registrados</h2>
-        
-        {% if computadores %}
-            <div class="card-grid">
-                {% for pc in computadores %}
-                    <div class="card">
-                        <h3>{{ pc.identificador }}</h3>
-                        <p><strong>Laboratório:</strong> {{ pc.laboratorio.nome|default:"Não informado" }}</p>
-                        <p><strong>Status:</strong> 
-                            <span class="badge {% if pc.status == 'DISPONIVEL' %}bg-disponivel{% elif pc.status == 'MANUTENCAO' %}bg-manutencao{% else %}bg-inativo{% endif %}">
-                                {{ pc.get_status_display }}
-                            </span>
-                        </p>
-                        {% if pc.status == 'DISPONIVEL' %}
-                            <a href="{% url 'criar_agendamento' pc.id %}" class="btn-agendar">Reservar Máquina</a>
+                    <div class="reservas-box">
+                        <strong>🕒 Próximas Reservas:</strong>
+                        {% if pc.reservas_ativas %}
+                            <ul class="reservas-list">
+                                {% for res in pc.reservas_ativas %}
+                                    <li>{{ res.data_hora_inicio|date:"d/m H:i" }} às {{ res.data_hora_fim|date:"H:i" }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <span style="color: #16a34a; font-size: 0.8rem; font-weight: 600;">Livre para novos agendamentos</span>
                         {% endif %}
                     </div>
-                {% endfor %}
+                </div>
+
+                <div>
+                    {% if pc.status == 'DISPONIVEL' %}
+                        <a href="{% url 'criar_agendamento' pc.id %}" class="btn-agendar">Reservar Máquina</a>
+                    {% endif %}
+                    {% if is_gestor %}
+                        <a href="{% url 'editar_computador' pc.id %}" class="btn-editar-pc">✏️ Editar Máquina</a>
+                    {% endif %}
+                </div>
             </div>
-        {% else %}
-            <p>Nenhum computador cadastrado no sistema até o momento.</p>
-        {% endif %}
+        {% endfor %}
     </div>
-</body>
-</html>
+{% else %}
+    <p style="color: #64748b;">Nenhum computador encontrado com os filtros aplicados.</p>
+{% endif %}
+{% endblock %}
