@@ -1,0 +1,104 @@
+{% extends 'agendamentos/base.html' %}
+
+{% block title %}Inventário de Softwares - Co-working & TI{% endblock %}
+
+{% block extra_css %}
+<style>
+    .grid-container {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+    .card-box {
+        background: #ffffff;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 0.3rem; }
+    .btn-submit {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 0.65rem 1.2rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+    .btn-submit:hover { background-color: var(--primary-hover); }
+    
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 0.85rem 1rem; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.88rem; }
+    th { background-color: #f8fafc; font-weight: 600; color: #475569; }
+    .badge-cat {
+        display: inline-block;
+        padding: 0.2rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: bold;
+        background-color: #e0f2fe;
+        color: #0369a1;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div>
+    <h2 style="margin: 0; color: #0f172a;">Inventário de Softwares</h2>
+    <p style="color: #64748b; margin-top: 0.25rem;">Cadastre e organize as aplicações disponíveis no ecossistema dos laboratórios.</p>
+</div>
+
+<div class="grid-container">
+    <!-- Form de Cadastro de Software -->
+    <div class="card-box">
+        <h3 style="margin-top: 0; font-size: 1.1rem; color: #0f172a;">Novo Software</h3>
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label>Nome do Programa</label>
+                {{ form.nome }}
+            </div>
+            <div class="form-group">
+                <label>Versão</label>
+                {{ form.versao }}
+            </div>
+            <div class="form-group">
+                <label>Categoria</label>
+                {{ form.categoria }}
+            </div>
+            <button type="submit" class="btn-submit">Salvar no Inventário</button>
+        </form>
+    </div>
+
+    <!-- Tabela do Inventário -->
+    <div class="card-box" style="padding: 0; overflow: hidden;">
+        {% if softwares %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Programa</th>
+                        <th>Versão</th>
+                        <th>Categoria</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in softwares %}
+                        <tr>
+                            <td><strong>{{ s.nome }}</strong></td>
+                            <td>{{ s.versao|default:"-" }}</td>
+                            <td><span class="badge-cat">{{ s.get_categoria_display }}</span></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p style="padding: 1.5rem; color: #64748b; margin: 0;">Nenhum software cadastrado no catálogo.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

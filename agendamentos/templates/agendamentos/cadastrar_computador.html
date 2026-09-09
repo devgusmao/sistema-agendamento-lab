@@ -4,109 +4,65 @@
 
 {% block extra_css %}
 <style>
-    .page-header { margin-bottom: 1.5rem; }
-    .page-header h1 { margin: 0; font-size: 1.5rem; color: #0f172a; }
-    .page-header p { margin: 0.25rem 0 0; color: #64748b; font-size: 0.9rem; }
-
     .form-card {
-        background: var(--card-bg);
+        max-width: 550px;
+        background: #ffffff;
         padding: 2rem;
-        border-radius: 10px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        border-radius: 8px;
         border: 1px solid #e2e8f0;
-        max-width: 500px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
-
-    .form-group { margin-bottom: 1.25rem; }
-    .form-group label { display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.88rem; color: #334155; }
-    .form-group input, .form-group select, .form-group textarea {
-        width: 100%;
-        padding: 0.6rem 0.8rem;
-        border: 1px solid #cbd5e1;
-        border-radius: 6px;
-        box-sizing: border-box;
-        font-size: 0.95rem;
-    }
-    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-        outline: none;
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-    }
-
-    .form-actions { display: flex; gap: 1rem; align-items: center; margin-top: 1.5rem; }
-
-    .btn-submit {
-        background-color: var(--primary-color);
-        color: white;
-        border: none;
-        padding: 0.65rem 1.25rem;
-        border-radius: 6px;
-        cursor: pointer;
-        font-weight: 600;
-        font-size: 0.92rem;
-        transition: background 0.2s;
-    }
-    .btn-submit:hover { background-color: var(--primary-hover); }
-
-    .btn-cancelar {
-        color: #64748b;
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 0.9rem;
-    }
-    .btn-cancelar:hover { color: #334155; text-decoration: underline; }
-
-    .errorlist { color: #ef4444; font-size: 0.85rem; padding-left: 1rem; margin-bottom: 1rem; }
+    .form-group { margin-bottom: 1.2rem; }
+    .form-group label { display: block; font-weight: 600; font-size: 0.85rem; color: #334155; margin-bottom: 0.35rem; }
+    .btn-submit { background-color: var(--primary-color); color: white; border: none; padding: 0.65rem 1.25rem; border-radius: 6px; font-weight: 600; cursor: pointer; }
+    .btn-cancel { background-color: #e2e8f0; color: #475569; text-decoration: none; padding: 0.65rem 1.25rem; border-radius: 6px; font-weight: 600; margin-left: 0.5rem; }
+    .error-list { color: #dc2626; font-size: 0.85rem; margin-bottom: 1rem; padding-left: 1rem; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1>Cadastrar Máquina</h1>
-    <p>Adicione um novo computador a um dos laboratórios cadastrados.</p>
-</div>
-
 <div class="form-card">
+    <h2 style="margin-top: 0; color: #0f172a;">Cadastrar Máquina</h2>
+    <p style="color: #64748b; font-size: 0.88rem; margin-bottom: 1.5rem;">Adicione um novo computador a um dos laboratórios cadastrados.</p>
+
+    {% if form.errors %}
+        <ul class="error-list">
+            {% for field, errors in form.errors.items %}
+                {% for error in errors %}
+                    <li><strong>{{ field|title }}:</strong> {{ error }}</li>
+                {% endfor %}
+            {% endfor %}
+        </ul>
+    {% endif %}
+
     <form method="post">
         {% csrf_token %}
-
-        {% if form.errors %}
-            <ul class="errorlist">
-                {% for field in form %}
-                    {% for error in field.errors %}
-                        <li>{{ field.label }}: {{ error }}</li>
-                    {% endfor %}
-                {% endfor %}
-                {% for error in form.non_field_errors %}
-                    <li>{{ error }}</li>
-                {% endfor %}
-            </ul>
-        {% endif %}
-
         <div class="form-group">
             <label>Identificador (Ex: PC-01)</label>
             {{ form.identificador }}
         </div>
-
         <div class="form-group">
             <label>Laboratório</label>
             {{ form.laboratorio }}
         </div>
-
         <div class="form-group">
             <label>Status Inicial</label>
             {{ form.status }}
         </div>
-
+        <div class="form-group">
+            <label>Valor por Hora (R$)</label>
+            {{ form.valor_hora }}
+        </div>
+        <div class="form-group">
+            <label>Softwares Instalados (Segure Ctrl para selecionar vários)</label>
+            {{ form.softwares }}
+        </div>
         <div class="form-group">
             <label>Observações</label>
             {{ form.observacoes }}
         </div>
-
-        <div class="form-actions">
-            <button type="submit" class="btn-submit">Salvar Máquina</button>
-            <a href="{% url 'home' %}" class="btn-cancelar">Cancelar</a>
-        </div>
+        <button type="submit" class="btn-submit">Salvar Máquina</button>
+        <a href="{% url 'home' %}" class="btn-cancel">Cancelar</a>
     </form>
 </div>
 {% endblock %}

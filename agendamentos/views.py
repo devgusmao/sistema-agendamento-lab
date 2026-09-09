@@ -1,13 +1,23 @@
+from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.db.models import Prefetch
-from django.shortcuts import render, redirect, get_object_or_404
+from django.db.models import Prefetch, Q
 from django.utils import timezone  
-from .forms import CustomUserCreationForm, ComputadorForm, EditarUsuarioForm, AgendamentoForm, LaboratorioForm
-from .models import Computador, Laboratorio, Perfil, Agendamento
+from .forms import (
+    CustomUserCreationForm, 
+    ComputadorForm, 
+    EditarUsuarioForm, 
+    AgendamentoForm, 
+    LaboratorioForm,
+    SoftwareForm,
+    SolicitacaoInstalacaoForm
+)
+from .models import Computador, Laboratorio, Perfil, Agendamento, Software, SolicitacaoInstalacao
 
+
+# --- AUTENTICAÇÃO E CADASTRO ---
 
 def cadastrar(request):
     if request.method == 'POST':
@@ -22,7 +32,7 @@ def cadastrar(request):
     return render(request, 'agendamentos/cadastrar.html', {'form': form})
 
 
-from django.db.models import Prefetch
+# --- HOME / DASHBOARD ---
 
 @login_required
 def home(request):
@@ -33,6 +43,7 @@ def home(request):
     busca = request.GET.get('busca', '').strip()
     lab_id = request.GET.get('laboratorio', '')
     status_filtro = request.GET.get('status', '')
+    software_id = request.GET.get('software', '')
 
     # Traz apenas agendamentos confirmados a partir de agora
     agendamentos_futuros = Agendamento.objects.filter(
@@ -40,8 +51,10 @@ def home(request):
         data_hora_fim__gte=timezone.now()
     ).order_by('data_hora_inicio')
 
+    # Ajustado de 'agendamento_set' para 'agendamentos' (related_name/relacionamento reverso padrao)
     computadores = Computador.objects.all().select_related('laboratorio').prefetch_related(
-        Prefetch('agendamento_set', queryset=agendamentos_futuros, to_attr='reservas_ativas')
+        'softwares',
+        Prefetch('agendamentos', queryset=agendamentos_futuros, to_attr='reservas_ativas')
     )
 
     if busca:
@@ -50,8 +63,11 @@ def home(request):
         computadores = computadores.filter(laboratorio_id=lab_id)
     if status_filtro:
         computadores = computadores.filter(status=status_filtro)
+    if software_id:
+        computadores = computadores.filter(softwares__id=software_id)
 
     laboratorios = Laboratorio.objects.all()
+    softwares = Software.objects.all()
     
     is_gestor = request.user.is_superuser or (
         hasattr(request.user, 'perfil') and request.user.perfil.tipo in ['ADMIN', 'TECNICO']
@@ -60,12 +76,17 @@ def home(request):
     context = {
         'computadores': computadores,
         'laboratorios': laboratorios,
+        'softwares': softwares,
         'is_gestor': is_gestor,
         'busca': busca,
         'lab_id': lab_id,
         'status_filtro': status_filtro,
+        'software_id': software_id,
     }
     return render(request, 'agendamentos/home.html', context)
+
+
+# --- GESTÃO DE LABORATÓRIOS ---
 
 @login_required
 def cadastrar_laboratorio(request):
@@ -85,6 +106,40 @@ def cadastrar_laboratorio(request):
 
     return render(request, 'agendamentos/cadastrar_laboratorio.html', {'form': form})
 
+
+@login_required
+def listar_laboratorios(request):
+    is_gestor = request.user.is_superuser or (hasattr(request.user, 'perfil') and request.user.perfil.tipo in ['ADMIN', 'TECNICO'])
+    if not is_gestor:
+        messages.error(request, 'Acesso restrito para técnicos e administradores.')
+        return redirect('home')
+
+    laboratorios = Laboratorio.objects.all().order_by('nome')
+    return render(request, 'agendamentos/laboratorios.html', {'laboratorios': laboratorios})
+
+
+@login_required
+def editar_laboratorio(request, laboratorio_id):
+    is_gestor = request.user.is_superuser or (hasattr(request.user, 'perfil') and request.user.perfil.tipo in ['ADMIN', 'TECNICO'])
+    if not is_gestor:
+        messages.error(request, 'Acesso restrito.')
+        return redirect('home')
+
+    laboratorio = get_object_or_404(Laboratorio, id=laboratorio_id)
+
+    if request.method == 'POST':
+        form = LaboratorioForm(request.POST, instance=laboratorio)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Laboratório "{laboratorio.nome}" atualizado com sucesso!')
+            return redirect('listar_laboratorios')
+    else:
+        form = LaboratorioForm(instance=laboratorio)
+
+    return render(request, 'agendamentos/cadastrar_laboratorio.html', {'form': form, 'laboratorio': laboratorio})
+
+
+# --- GESTÃO DE COMPUTADORES ---
 
 @login_required
 def cadastrar_computador(request):
@@ -127,6 +182,86 @@ def editar_computador(request, computador_id):
 
 
 @login_required
+def listar_computadores(request):
+    is_gestor = request.user.is_superuser or (hasattr(request.user, 'perfil') and request.user.perfil.tipo in ['ADMIN', 'TECNICO'])
+    if not is_gestor:
+        messages.error(request, 'Acesso restrito para técnicos e administradores.')
+        return redirect('home')
+
+    computadores = Computador.objects.all().select_related('laboratorio').prefetch_related('softwares').order_by('identificador')
+    return render(request, 'agendamentos/computadores.html', {'computadores': computadores})
+
+
+# --- INVENTÁRIO DE SOFTWARES ---
+
+@login_required
+def listar_softwares(request):
+    is_gestor = request.user.is_superuser or (hasattr(request.user, 'perfil') and request.user.perfil.tipo in ['ADMIN', 'TECNICO'])
+    if not is_gestor:
+        messages.error(request, 'Acesso restrito para técnicos e administradores.')
+        return redirect('home')
+
+    softwares = Software.objects.all().order_by('categoria', 'nome')
+    if request.method == 'POST':
+        form = SoftwareForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Software cadastrado com sucesso!')
+            return redirect('listar_softwares')
+    else:
+        form = SoftwareForm()
+
+    return render(request, 'agendamentos/softwares.html', {'softwares': softwares, 'form': form})
+
+
+# --- SOLICITAÇÕES DE INSTALAÇÃO DE PROGRAMAS ---
+
+@login_required
+def criar_solicitacao_instalacao(request, computador_id):
+    computador = get_object_or_404(Computador, id=computador_id)
+    if request.method == 'POST':
+        form = SolicitacaoInstalacaoForm(request.POST)
+        if form.is_valid():
+            solicitacao = form.save(commit=False)
+            solicitacao.usuario = request.user
+            solicitacao.computador = computador
+            solicitacao.save()
+            messages.success(request, f'Solicitação enviada para a equipe técnica ({computador.identificador}).')
+            return redirect('home')
+    else:
+        form = SolicitacaoInstalacaoForm()
+
+    return render(request, 'agendamentos/solicitar_instalacao.html', {'form': form, 'computador': computador})
+
+
+@login_required
+def listar_solicitacoes(request):
+    is_gestor = request.user.is_superuser or (hasattr(request.user, 'perfil') and request.user.perfil.tipo in ['ADMIN', 'TECNICO'])
+    if is_gestor:
+        solicitacoes = SolicitacaoInstalacao.objects.select_related('usuario', 'computador', 'computador__laboratorio').order_by('-data_criacao')
+    else:
+        solicitacoes = SolicitacaoInstalacao.objects.filter(usuario=request.user).select_related('computador', 'computador__laboratorio').order_by('-data_criacao')
+
+    return render(request, 'agendamentos/solicitacoes_list.html', {'solicitacoes': solicitacoes, 'is_gestor': is_gestor})
+
+
+@login_required
+def atualizar_status_solicitacao(request, solicitacao_id, novo_status):
+    is_gestor = request.user.is_superuser or (hasattr(request.user, 'perfil') and request.user.perfil.tipo in ['ADMIN', 'TECNICO'])
+    if not is_gestor:
+        messages.error(request, 'Acesso negado.')
+        return redirect('home')
+
+    solicitacao = get_object_or_404(SolicitacaoInstalacao, id=solicitacao_id)
+    solicitacao.status = novo_status
+    solicitacao.save()
+    messages.success(request, f'Status da solicitação de {solicitacao.software_nome} alterado.')
+    return redirect('listar_solicitacoes')
+
+
+# --- RESERVAS E AGENDAMENTOS ---
+
+@login_required
 def criar_agendamento(request, computador_id):
     if not request.user.is_superuser:
         if not hasattr(request.user, 'perfil') or not request.user.perfil.aprovado:
@@ -144,7 +279,6 @@ def criar_agendamento(request, computador_id):
         data_hora_fim__gte=timezone.now()
     ).order_by('data_hora_inicio')
 
-    # Prepara a lista em formato serializável para JSON
     reservas_json = [
         {
             'from': r.data_hora_inicio.strftime('%Y-%m-%d %H:%M'),
@@ -172,8 +306,13 @@ def criar_agendamento(request, computador_id):
                 agendamento = form.save(commit=False)
                 agendamento.usuario = request.user
                 agendamento.computador = computador
+
+                # Cálculo de tarifação por hora
+                horas = Decimal((fim - inicio).total_seconds() / 3600)
+                agendamento.valor_total = round(horas * computador.valor_hora, 2)
+
                 agendamento.save()
-                messages.success(request, f'Agendamento confirmado para {computador.identificador}!')
+                messages.success(request, f'Agendamento confirmado para {computador.identificador}! Valor total: R$ {agendamento.valor_total}')
                 return redirect('home')
     else:
         form = AgendamentoForm()
@@ -185,44 +324,12 @@ def criar_agendamento(request, computador_id):
         'reservas_json': reservas_json
     })
 
-@login_required
-def listar_laboratorios(request):
-    is_gestor = request.user.is_superuser or (hasattr(request.user, 'perfil') and request.user.perfil.tipo in ['ADMIN', 'TECNICO'])
-    if not is_gestor:
-        messages.error(request, 'Acesso restrito para técnicos e administradores.')
-        return redirect('home')
-
-    laboratorios = Laboratorio.objects.all().order_by('nome')
-    return render(request, 'agendamentos/laboratorios.html', {'laboratorios': laboratorios})
-
-
-@login_required
-def editar_laboratorio(request, laboratorio_id):
-    is_gestor = request.user.is_superuser or (hasattr(request.user, 'perfil') and request.user.perfil.tipo in ['ADMIN', 'TECNICO'])
-    if not is_gestor:
-        messages.error(request, 'Acesso restrito.')
-        return redirect('home')
-
-    laboratorio = get_object_or_404(Laboratorio, id=laboratorio_id)
-
-    if request.method == 'POST':
-        form = LaboratorioForm(request.POST, instance=laboratorio)
-        if form.is_valid():
-            form.save()
-            messages.success(request, f'Laboratório "{laboratorio.nome}" atualizado com sucesso!')
-            return redirect('listar_laboratorios')
-    else:
-        form = LaboratorioForm(instance=laboratorio)
-
-    return render(request, 'agendamentos/cadastrar_laboratorio.html', {'form': form, 'laboratorio': laboratorio})
 
 @login_required
 def meus_agendamentos(request):
     agendamentos = Agendamento.objects.filter(usuario=request.user).order_by('-data_hora_inicio')
     return render(request, 'agendamentos/meus_agendamentos.html', {'agendamentos': agendamentos})
 
-
-from django.db.models import Q
 
 @login_required
 def gerenciar_agendamentos(request):
@@ -269,6 +376,8 @@ def cancelar_agendamento(request, agendamento_id):
         return redirect('gerenciar_agendamentos')
     return redirect('meus_agendamentos')
 
+
+# --- GERENCIAMENTO DE USUÁRIOS E PERMISSÕES ---
 
 @login_required
 def liberar_usuarios(request):
@@ -356,15 +465,6 @@ def deletar_usuario(request, user_id):
     messages.success(request, 'Usuário removido com sucesso.')
     return redirect('gerenciar_usuarios')
 
-@login_required
-def listar_computadores(request):
-    is_gestor = request.user.is_superuser or (hasattr(request.user, 'perfil') and request.user.perfil.tipo in ['ADMIN', 'TECNICO'])
-    if not is_gestor:
-        messages.error(request, 'Acesso restrito para técnicos e administradores.')
-        return redirect('home')
-
-    computadores = Computador.objects.all().select_related('laboratorio').order_by('identificador')
-    return render(request, 'agendamentos/computadores.html', {'computadores': computadores})
 
 @login_required
 def permissoes_acesso(request):

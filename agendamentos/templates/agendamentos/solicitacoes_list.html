@@ -1,0 +1,80 @@
+{% extends 'agendamentos/base.html' %}
+
+{% block title %}Solicitações de Softwares{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card-table {
+        background: white;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        overflow: hidden;
+        margin-top: 1.5rem;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 0.9rem 1.2rem; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.88rem; }
+    th { background-color: #f8fafc; color: #475569; font-weight: 600; }
+
+    .badge-status { padding: 0.25rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: bold; display: inline-block; }
+    .st-pendente { background-color: #fef3c7; color: #92400e; }
+    .st-andamento { background-color: #e0f2fe; color: #0369a1; }
+    .st-concluido { background-color: #dcfce7; color: #166534; }
+    .st-rejeitado { background-color: #fee2e2; color: #991b1b; }
+
+    .btn-action { text-decoration: none; font-size: 0.8rem; font-weight: 600; padding: 0.3rem 0.6rem; border-radius: 4px; margin-right: 0.3rem; color: white; }
+    .btn-work { background-color: #0284c7; }
+    .btn-ok { background-color: #16a34a; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div>
+    <h2 style="margin: 0; color: #0f172a;">Solicitações de Instalação</h2>
+    <p style="color: #64748b; margin-top: 0.25rem;">Acompanhe o andamento dos pedidos de software para os computadores.</p>
+</div>
+
+<div class="card-table">
+    {% if solicitacoes %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Software</th>
+                    <th>Computador</th>
+                    <th>Solicitante</th>
+                    <th>Justificativa</th>
+                    <th>Status</th>
+                    {% if is_gestor %}<th>Ações de TI</th>{% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for sol in solicitacoes %}
+                    <tr>
+                        <td><strong>{{ sol.software_nome }}</strong></td>
+                        <td>{{ sol.computador.identificador }} <br><small style="color:#64748b;">{{ sol.computador.laboratorio.nome }}</small></td>
+                        <td>{{ sol.usuario.username }}</td>
+                        <td style="max-width: 250px;">{{ sol.justificativa }}</td>
+                        <td>
+                            <span class="badge-status {% if sol.status == 'PENDENTE' %}st-pendente{% elif sol.status == 'EM_ANDAMENTO' %}st-andamento{% elif sol.status == 'CONCLUIDO' %}st-concluido{% else %}st-rejeitado{% endif %}">
+                                {{ sol.get_status_display }}
+                            </span>
+                        </td>
+                        {% if is_gestor %}
+                            <td>
+                                {% if sol.status == 'PENDENTE' %}
+                                    <a href="{% url 'atualizar_status_solicitacao' sol.id 'EM_ANDAMENTO' %}" class="btn-action btn-work">Em Andamento</a>
+                                {% endif %}
+                                {% if sol.status != 'CONCLUIDO' %}
+                                    <a href="{% url 'atualizar_status_solicitacao' sol.id 'CONCLUIDO' %}" class="btn-action btn-ok">Concluir</a>
+                                {% endif %}
+                            </td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p style="padding: 1.5rem; color: #64748b; margin: 0;">Nenhuma solicitação de software cadastrada.</p>
+    {% endif %}
+</div>
+{% endblock %}

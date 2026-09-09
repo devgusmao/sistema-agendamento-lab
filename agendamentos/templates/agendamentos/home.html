@@ -1,137 +1,80 @@
 {% extends 'agendamentos/base.html' %}
 
-{% block title %}Painel - Disponibilidade de Máquinas{% endblock %}
+{% block title %}Início - Painel de Máquinas{% endblock %}
 
 {% block extra_css %}
 <style>
-    .page-header { margin-bottom: 2rem; }
-    .page-header h1 { margin: 0; font-size: 1.5rem; color: #0f172a; }
-    .page-header p { margin: 0.25rem 0 0; color: #64748b; font-size: 0.9rem; }
-
-    .filter-card {
-        background: var(--card-bg);
-        padding: 1.25rem;
-        border-radius: 10px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        margin-bottom: 2rem;
-        border: 1px solid #e2e8f0;
-    }
-
-    .filter-form { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; }
-    .form-group-filter { flex: 1; min-width: 180px; }
-    .form-group-filter label { display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.35rem; color: #475569; }
-    .form-group-filter input, .form-group-filter select {
-        width: 100%; padding: 0.55rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.9rem;
-    }
-
-    .btn-filter { background-color: var(--primary-color); color: white; border: none; padding: 0.6rem 1.25rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
-    .btn-filter:hover { background-color: var(--primary-hover); }
-    .btn-clear { background-color: #e2e8f0; color: #475569; text-decoration: none; padding: 0.6rem 1rem; border-radius: 6px; font-size: 0.9rem; font-weight: 600; }
-
-    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
-    .card {
-        background: var(--card-bg); padding: 1.5rem; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: space-between; transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
-    .card-title { margin: 0; font-size: 1.1rem; color: #0f172a; }
-
-    .badge { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
-    .bg-disponivel { background-color: #dcfce7; color: #166534; }
-    .bg-manutencao { background-color: #fef3c7; color: #92400e; }
-    .bg-inativo { background-color: #fee2e2; color: #991b1b; }
-
-    .reservas-box { margin-top: 1rem; background-color: #f1f5f9; border-radius: 6px; padding: 0.75rem; font-size: 0.85rem; }
-    .reservas-box strong { display: block; margin-bottom: 0.4rem; color: #475569; }
-    .reservas-list { list-style: none; padding: 0; margin: 0; max-height: 90px; overflow-y: auto; }
-    .reservas-list li { background: #ffffff; padding: 0.3rem 0.5rem; border-radius: 4px; margin-bottom: 0.3rem; border: 1px solid #e2e8f0; color: #334155; }
-
-    .btn-agendar { display: block; margin-top: 1rem; width: 100%; text-align: center; background-color: #16a34a; color: white; padding: 0.6rem 0; border-radius: 6px; text-decoration: none; font-weight: 600; }
-    .btn-agendar:hover { background-color: #15803d; }
-    .btn-editar-pc { display: block; text-align: center; margin-top: 0.5rem; color: #2563eb; text-decoration: none; font-size: 0.85rem; font-weight: 600; }
+    .filter-bar { display: flex; gap: 1rem; background: white; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1.5rem; }
+    .pc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+    .pc-card { background: white; border-radius: 8px; border: 1px solid #e2e8f0; padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; }
+    .badge-soft { background: #e0f2fe; color: #0369a1; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.75rem; margin-right: 0.2rem; display: inline-block; margin-bottom: 0.2rem; }
+    .btn-card { display: block; text-align: center; padding: 0.5rem; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.85rem; }
+    .btn-primary { background: var(--primary-color); color: white; }
+    .btn-sec { background: #f1f5f9; color: #334155; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1>Disponibilidade de Computadores</h1>
-    <p>Selecione um laboratório e reserve o horário desejado.</p>
+<div style="margin-bottom: 1.5rem;">
+    <h2>Painel de Máquinas e Co-working</h2>
+    <p style="color: #64748b;">Consulte a disponibilidade de computadores, programas instalados e faça sua reserva.</p>
 </div>
 
-<!-- Barra de Filtros -->
-<div class="filter-card">
-    <form method="get" class="filter-form">
-        <div class="form-group-filter">
-            <label>Buscar Máquina</label>
-            <input type="text" name="busca" placeholder="Ex: PC-01 ou EVO" value="{{ busca }}">
-        </div>
-        <div class="form-group-filter">
-            <label>Laboratório</label>
-            <select name="laboratorio">
-                <option value="">Todos os Laboratórios</option>
-                {% for lab in laboratorios %}
-                    <option value="{{ lab.id }}" {% if lab_id == lab.id|stringformat:"i" %}selected{% endif %}>{{ lab.nome }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="form-group-filter">
-            <label>Status</label>
-            <select name="status">
-                <option value="">Todos os Status</option>
-                <option value="DISPONIVEL" {% if status_filtro == 'DISPONIVEL' %}selected{% endif %}>Disponível</option>
-                <option value="MANUTENCAO" {% if status_filtro == 'MANUTENCAO' %}selected{% endif %}>Em Manutenção</option>
-                <option value="INATIVO" {% if status_filtro == 'INATIVO' %}selected{% endif %}>Inativo</option>
-            </select>
-        </div>
-        <button type="submit" class="btn-filter">Filtrar</button>
-        {% if busca or lab_id or status_filtro %}
-            <a href="{% url 'home' %}" class="btn-clear">Limpar</a>
-        {% endif %}
-    </form>
-</div>
+<!-- Filtros de Busca -->
+<form method="get" class="filter-bar">
+    <div style="flex: 1;">
+        <input type="text" name="busca" class="form-control" placeholder="Buscar por máquina..." value="{{ busca }}">
+    </div>
+    <div style="flex: 1;">
+        <select name="laboratorio" class="form-control" onchange="this.form.submit()">
+            <option value="">Todos os Laboratórios</option>
+            {% for l in laboratorios %}
+                <option value="{{ l.id }}" {% if l.id|stringformat:"s" == lab_id %}selected{% endif %}>{{ l.nome }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div style="flex: 1;">
+        <select name="software" class="form-control" onchange="this.form.submit()">
+            <option value="">Filtrar por Software</option>
+            {% for s in softwares %}
+                <option value="{{ s.id }}" {% if s.id|stringformat:"s" == software_id %}selected{% endif %}>{{ s.nome }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</form>
 
 <!-- Grid de Computadores -->
-{% if computadores %}
-    <div class="card-grid">
-        {% for pc in computadores %}
-            <div class="card">
-                <div>
-                    <div class="card-header">
-                        <h3 class="card-title">{{ pc.identificador }}</h3>
-                        <span class="badge {% if pc.status == 'DISPONIVEL' %}bg-disponivel{% elif pc.status == 'MANUTENCAO' %}bg-manutencao{% else %}bg-inativo{% endif %}">
-                            {{ pc.get_status_display }}
-                        </span>
-                    </div>
-                    <p style="margin: 0 0 0.5rem 0; font-size: 0.9rem; color: #64748b;">
-                        <strong>Laboratório:</strong> {{ pc.laboratorio.nome|default:"Não informado" }}
-                    </p>
-
-                    <div class="reservas-box">
-                        <strong>🕒 Próximas Reservas:</strong>
-                        {% if pc.reservas_ativas %}
-                            <ul class="reservas-list">
-                                {% for res in pc.reservas_ativas %}
-                                    <li>{{ res.data_hora_inicio|date:"d/m H:i" }} às {{ res.data_hora_fim|date:"H:i" }}</li>
-                                {% endfor %}
-                            </ul>
-                        {% else %}
-                            <span style="color: #16a34a; font-size: 0.8rem; font-weight: 600;">Livre para novos agendamentos</span>
-                        {% endif %}
-                    </div>
+<div class="pc-grid">
+    {% for pc in computadores %}
+        <div class="pc-card">
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <h3 style="margin:0; font-size: 1.1rem; color: #0f172a;">{{ pc.identificador }}</h3>
+                    <span style="font-size: 0.8rem; font-weight: bold; background: #dcfce7; color: #166534; padding: 0.2rem 0.5rem; border-radius: 4px;">
+                        R$ {{ pc.valor_hora }}/h
+                    </span>
                 </div>
+                <p style="color: #64748b; font-size: 0.85rem; margin: 0 0 0.8rem;">{{ pc.laboratorio.nome }}</p>
 
-                <div>
-                    {% if pc.status == 'DISPONIVEL' %}
-                        <a href="{% url 'criar_agendamento' pc.id %}" class="btn-agendar">Reservar Máquina</a>
-                    {% endif %}
-                    {% if is_gestor %}
-                        <a href="{% url 'editar_computador' pc.id %}" class="btn-editar-pc">✏️ Editar Máquina</a>
-                    {% endif %}
+                <div style="margin-bottom: 1rem;">
+                    <strong style="font-size: 0.78rem; color: #475569;">Softwares Instalados:</strong>
+                    <div style="margin-top: 0.3rem;">
+                        {% for soft in pc.softwares.all %}
+                            <span class="badge-soft">{{ soft.nome }}</span>
+                        {% empty %}
+                            <span style="font-size: 0.75rem; color: #94a3b8;">Nenhum cadastrado</span>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
-        {% endfor %}
-    </div>
-{% else %}
-    <p style="color: #64748b;">Nenhum computador encontrado com os filtros aplicados.</p>
-{% endif %}
+
+            <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                <a href="{% url 'criar_agendamento' pc.id %}" class="btn-card btn-primary" style="flex: 1;">Reservar</a>
+                <a href="{% url 'criar_solicitacao_instalacao' pc.id %}" class="btn-card btn-sec" title="Solicitar Programa">🛠️</a>
+            </div>
+        </div>
+    {% empty %}
+        <p style="grid-column: 1 / -1; color: #64748b;">Nenhum computador encontrado com os filtros selecionados.</p>
+    {% endfor %}
+</div>
 {% endblock %}
