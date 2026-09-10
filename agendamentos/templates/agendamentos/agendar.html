@@ -19,9 +19,12 @@
         .errorlist { color: red; font-size: 0.85rem; padding-left: 1rem; }
         
         .bloqueados-box { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.85rem; }
-        .bloqueados-box strong { display: block; margin-bottom: 0.4rem; font-size: 0.9rem; }
-        .bloqueados-list { list-style: none; padding: 0; margin: 0; }
-        .bloqueados-list li { background: #ffe8a1; padding: 0.25rem 0.5rem; border-radius: 3px; margin-bottom: 0.3rem; font-weight: bold; }
+        .bloqueados-box strong { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; }
+        .calendar-list { display: grid; gap: 0.45rem; margin-top: 0.5rem; }
+        .calendar-day { background: rgba(255,255,255,0.55); border: 1px solid rgba(217, 183, 76, 0.65); border-radius: 6px; padding: 0.5rem; }
+        .day-label { display: block; margin-bottom: 0.35rem; font-weight: bold; color: #7c4a00; }
+        .slot-list { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+        .slot-pill { background: #ffe8a1; color: #7c4a00; border-radius: 999px; padding: 0.2rem 0.45rem; font-size: 0.75rem; font-weight: bold; }
         
         .info-regra { font-size: 0.85rem; color: #555; background-color: #e9ecef; padding: 0.6rem; border-radius: 6px; margin-bottom: 1.2rem; border-left: 4px solid #007bff; }
     </style>
@@ -42,13 +45,21 @@
         </div>
 
         <div class="bloqueados-box">
-            <strong>🚫 Horários Indisponíveis (Já Reservados):</strong>
+            <strong>� Calendário de Reservas:</strong>
             {% if reservas_existentes %}
-                <ul class="bloqueados-list">
-                    {% for r in reservas_existentes %}
-                        <li>{{ r.data_hora_inicio|date:"d/m/Y H:i" }} até {{ r.data_hora_fim|date:"H:i" }}</li>
+                <div class="calendar-list">
+                    {% regroup reservas_existentes by data_hora_inicio|date:"d/m/Y" as reservas_por_dia %}
+                    {% for dia in reservas_por_dia %}
+                        <div class="calendar-day">
+                            <span class="day-label">{{ dia.grouper }}</span>
+                            <div class="slot-list">
+                                {% for r in dia.list %}
+                                    <span class="slot-pill">{{ r.data_hora_inicio|date:"H:i" }} - {{ r.data_hora_fim|date:"H:i" }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
                     {% endfor %}
-                </ul>
+                </div>
             {% else %}
                 <span style="color: #155724;">Esta máquina está totalmente livre!</span>
             {% endif %}

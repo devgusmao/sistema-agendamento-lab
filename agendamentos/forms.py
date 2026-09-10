@@ -157,5 +157,8 @@ class SolicitacaoInstalacaoForm(forms.ModelForm):
         }
         widgets = {
             'software_nome': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Docker Desktop, Oracle SQL Developer'}),
-            'justificativa': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Explique por que precisa deste programa instalado na máquina'}),
+            'justificativa': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Explique por que precisa deste programa para uso geral'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)

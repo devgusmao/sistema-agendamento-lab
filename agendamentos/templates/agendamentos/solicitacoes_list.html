@@ -1,37 +1,162 @@
 {% extends 'agendamentos/base.html' %}
 
-{% block title %}Solicitações de Softwares{% endblock %}
+{% block title %}Dashboard de Solicitações{% endblock %}
 
 {% block extra_css %}
 <style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .page-header h2 {
+        margin: 0;
+        color: #0f172a;
+    }
+
+    .page-header p {
+        margin: 0.3rem 0 0;
+        color: #64748b;
+    }
+
+    .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: #fff;
+        text-decoration: none;
+        font-weight: 700;
+        box-shadow: 0 8px 20px rgba(37, 99, 235, 0.2);
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+        background: linear-gradient(135deg, #ffffff, #f8fafc);
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 1rem 1.1rem;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.03);
+    }
+
+    .stat-label {
+        display: block;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #64748b;
+        margin-bottom: 0.4rem;
+    }
+
+    .stat-value {
+        display: block;
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: #0f172a;
+    }
+
     .card-table {
         background: white;
-        border-radius: 8px;
+        border-radius: 12px;
         border: 1px solid #e2e8f0;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.04);
         overflow: hidden;
-        margin-top: 1.5rem;
     }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 0.9rem 1.2rem; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.88rem; }
-    th { background-color: #f8fafc; color: #475569; font-weight: 600; }
 
-    .badge-status { padding: 0.25rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: bold; display: inline-block; }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th, td {
+        padding: 0.9rem 1.1rem;
+        text-align: left;
+        border-bottom: 1px solid #e2e8f0;
+        font-size: 0.88rem;
+        vertical-align: top;
+    }
+
+    th {
+        background-color: #f8fafc;
+        color: #475569;
+        font-weight: 700;
+    }
+
+    .badge-status {
+        padding: 0.28rem 0.65rem;
+        border-radius: 999px;
+        font-size: 0.74rem;
+        font-weight: 700;
+        display: inline-block;
+    }
+
     .st-pendente { background-color: #fef3c7; color: #92400e; }
     .st-andamento { background-color: #e0f2fe; color: #0369a1; }
     .st-concluido { background-color: #dcfce7; color: #166534; }
     .st-rejeitado { background-color: #fee2e2; color: #991b1b; }
 
-    .btn-action { text-decoration: none; font-size: 0.8rem; font-weight: 600; padding: 0.3rem 0.6rem; border-radius: 4px; margin-right: 0.3rem; color: white; }
+    .btn-action {
+        display: inline-block;
+        text-decoration: none;
+        font-size: 0.76rem;
+        font-weight: 700;
+        padding: 0.38rem 0.65rem;
+        border-radius: 6px;
+        margin-right: 0.35rem;
+        color: white;
+    }
+
     .btn-work { background-color: #0284c7; }
     .btn-ok { background-color: #16a34a; }
+    .btn-reject { background-color: #dc2626; }
+
+    .muted {
+        color: #64748b;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div>
-    <h2 style="margin: 0; color: #0f172a;">Solicitações de Instalação</h2>
-    <p style="color: #64748b; margin-top: 0.25rem;">Acompanhe o andamento dos pedidos de software para os computadores.</p>
+<div class="page-header">
+    <div>
+        <h2>Dashboard de Solicitações</h2>
+        <p>Acompanhe as solicitações de software por status, destino e responsável.</p>
+    </div>
+    <a href="{% url 'criar_solicitacao_global' %}" class="btn-primary">+ Nova Solicitação</a>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <span class="stat-label">Total</span>
+        <span class="stat-value">{{ status_counts.total }}</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Pendentes</span>
+        <span class="stat-value">{{ status_counts.pendente }}</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Em andamento</span>
+        <span class="stat-value">{{ status_counts.andamento }}</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Concluídos</span>
+        <span class="stat-value">{{ status_counts.concluido }}</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Rejeitados</span>
+        <span class="stat-value">{{ status_counts.rejeitado }}</span>
+    </div>
 </div>
 
 <div class="card-table">
@@ -40,7 +165,7 @@
             <thead>
                 <tr>
                     <th>Software</th>
-                    <th>Computador</th>
+                    <th>Destino</th>
                     <th>Solicitante</th>
                     <th>Justificativa</th>
                     <th>Status</th>
@@ -51,9 +176,15 @@
                 {% for sol in solicitacoes %}
                     <tr>
                         <td><strong>{{ sol.software_nome }}</strong></td>
-                        <td>{{ sol.computador.identificador }} <br><small style="color:#64748b;">{{ sol.computador.laboratorio.nome }}</small></td>
+                        <td>
+                            {% if sol.destino_display %}
+                                {{ sol.destino_display }}
+                            {% else %}
+                                <span class="muted">Não informado</span>
+                            {% endif %}
+                        </td>
                         <td>{{ sol.usuario.username }}</td>
-                        <td style="max-width: 250px;">{{ sol.justificativa }}</td>
+                        <td style="max-width: 280px;">{{ sol.justificativa }}</td>
                         <td>
                             <span class="badge-status {% if sol.status == 'PENDENTE' %}st-pendente{% elif sol.status == 'EM_ANDAMENTO' %}st-andamento{% elif sol.status == 'CONCLUIDO' %}st-concluido{% else %}st-rejeitado{% endif %}">
                                 {{ sol.get_status_display }}
@@ -63,6 +194,9 @@
                             <td>
                                 {% if sol.status == 'PENDENTE' %}
                                     <a href="{% url 'atualizar_status_solicitacao' sol.id 'EM_ANDAMENTO' %}" class="btn-action btn-work">Em Andamento</a>
+                                {% endif %}
+                                {% if sol.status != 'REJEITADO' and sol.status != 'CONCLUIDO' %}
+                                    <a href="{% url 'atualizar_status_solicitacao' sol.id 'REJEITADO' %}" class="btn-action btn-reject">Rejeitar</a>
                                 {% endif %}
                                 {% if sol.status != 'CONCLUIDO' %}
                                     <a href="{% url 'atualizar_status_solicitacao' sol.id 'CONCLUIDO' %}" class="btn-action btn-ok">Concluir</a>

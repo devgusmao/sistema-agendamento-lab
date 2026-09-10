@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.db.models import Prefetch, Q
+from django.db.models import Prefetch, Q, Sum, Count
 from django.utils import timezone  
 from .forms import (
     CustomUserCreationForm, 
@@ -217,8 +217,11 @@ def listar_softwares(request):
 # --- SOLICITAÇÕES DE INSTALAÇÃO DE PROGRAMAS ---
 
 @login_required
-def criar_solicitacao_instalacao(request, computador_id):
-    computador = get_object_or_404(Computador, id=computador_id)
+def criar_solicitacao_instalacao(request, computador_id=None):
+    computador = None
+    if computador_id:
+        computador = get_object_or_404(Computador, id=computador_id)
+
     if request.method == 'POST':
         form = SolicitacaoInstalacaoForm(request.POST)
         if form.is_valid():
@@ -226,10 +229,13 @@ def criar_solicitacao_instalacao(request, computador_id):
             solicitacao.usuario = request.user
             solicitacao.computador = computador
             solicitacao.save()
-            messages.success(request, f'Solicitação enviada para a equipe técnica ({computador.identificador}).')
+            if computador:
+                messages.success(request, f'Solicitação enviada para a equipe técnica ({computador.identificador}).')
+            else:
+                messages.success(request, 'Solicitação global enviada para a equipe técnica.')
             return redirect('home')
     else:
-        form = SolicitacaoInstalacaoForm()
+        form = SolicitacaoInstalacaoForm(initial={'laboratorio': computador.laboratorio if computador else None})
 
     return render(request, 'agendamentos/solicitar_instalacao.html', {'form': form, 'computador': computador})
 
@@ -238,11 +244,23 @@ def criar_solicitacao_instalacao(request, computador_id):
 def listar_solicitacoes(request):
     is_gestor = request.user.is_superuser or (hasattr(request.user, 'perfil') and request.user.perfil.tipo in ['ADMIN', 'TECNICO'])
     if is_gestor:
-        solicitacoes = SolicitacaoInstalacao.objects.select_related('usuario', 'computador', 'computador__laboratorio').order_by('-data_criacao')
+        solicitacoes = SolicitacaoInstalacao.objects.select_related('usuario', 'computador', 'computador__laboratorio', 'laboratorio').order_by('-data_criacao')
     else:
-        solicitacoes = SolicitacaoInstalacao.objects.filter(usuario=request.user).select_related('computador', 'computador__laboratorio').order_by('-data_criacao')
+        solicitacoes = SolicitacaoInstalacao.objects.filter(usuario=request.user).select_related('computador', 'computador__laboratorio', 'laboratorio').order_by('-data_criacao')
 
-    return render(request, 'agendamentos/solicitacoes_list.html', {'solicitacoes': solicitacoes, 'is_gestor': is_gestor})
+    status_counts = {
+        'total': solicitacoes.count(),
+        'pendente': solicitacoes.filter(status='PENDENTE').count(),
+        'andamento': solicitacoes.filter(status='EM_ANDAMENTO').count(),
+        'concluido': solicitacoes.filter(status='CONCLUIDO').count(),
+        'rejeitado': solicitacoes.filter(status='REJEITADO').count(),
+    }
+
+    return render(request, 'agendamentos/solicitacoes_list.html', {
+        'solicitacoes': solicitacoes,
+        'is_gestor': is_gestor,
+        'status_counts': status_counts,
+    })
 
 
 @login_required
@@ -357,6 +375,44 @@ def gerenciar_agendamentos(request):
         'agendamentos': agendamentos,
         'busca': busca,
         'status_filtro': status_filtro
+    })
+
+
+@login_required
+def dashboard_financeiro(request):
+    is_admin = request.user.is_superuser or (hasattr(request.user, 'perfil') and request.user.perfil.tipo == 'ADMIN')
+    if not is_admin:
+        messages.error(request, 'Acesso restrito para administradores.')
+        return redirect('home')
+
+    laboratorios = Laboratorio.objects.all().order_by('nome')
+
+    summary = []
+    for laboratorio in laboratorios:
+        computadores = Computador.objects.filter(laboratorio=laboratorio)
+        total_valor = Agendamento.objects.filter(
+            computador__in=computadores,
+            status='CONFIRMADO'
+        ).aggregate(total=Sum('valor_total'))['total'] or Decimal('0.00')
+
+        summary.append({
+            'laboratorio': laboratorio,
+            'maquinas': computadores.count(),
+            'agendamentos': Agendamento.objects.filter(computador__in=computadores, status='CONFIRMADO').count(),
+            'receita': total_valor,
+        })
+
+    maquinas = Computador.objects.select_related('laboratorio').annotate(
+        total_agendamentos=Count('agendamentos', filter=Q(agendamentos__status='CONFIRMADO')),
+        receita=Sum('agendamentos__valor_total', filter=Q(agendamentos__status='CONFIRMADO'))
+    ).order_by('laboratorio__nome', 'identificador')
+
+    total_geral = Agendamento.objects.filter(status='CONFIRMADO').aggregate(total=Sum('valor_total'))['total'] or Decimal('0.00')
+
+    return render(request, 'agendamentos/dashboard_financeiro.html', {
+        'summary': summary,
+        'maquinas': maquinas,
+        'total_geral': total_geral,
     })
 
 

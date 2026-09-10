@@ -1,52 +1,53 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Agendamento de Laboratórios</title>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f6f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .login-card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 350px; }
-        .login-card h2 { margin-bottom: 1.5rem; text-align: center; color: #333; }
-        .form-group { margin-bottom: 1rem; }
-        .form-group label { display: block; margin-bottom: 0.5rem; color: #666; }
-        .form-group input { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        .btn { width: 100%; padding: 0.75rem; background-color: #007bff; border: none; color: white; border-radius: 4px; cursor: pointer; font-size: 1rem; }
-        .btn:hover { background-color: #0056b3; }
-        .error { color: red; font-size: 0.875rem; margin-bottom: 1rem; text-align: center; }
-        .success { color: #28a745; font-size: 0.875rem; margin-bottom: 1rem; text-align: center; }
-        .signup-link { display: block; text-align: center; margin-top: 1.25rem; color: #007bff; text-decoration: none; font-size: 0.9rem; }
-        .signup-link:hover { text-decoration: underline; }
-    </style>
+    <link rel="stylesheet" href="{% static 'agendamentos/css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'agendamentos/css/auth.css' %}">
 </head>
-<body>
-    <div class="login-card">
-        <h2>Acesso ao Sistema</h2>
-        
-        {% if messages %}
-            {% for message in messages %}
-                <p class="success">{{ message }}</p>
-            {% endfor %}
-        {% endif %}
+<body class="auth-page">
+    <div class="auth-shell">
+        <div class="auth-card">
+            <div class="auth-brand">🖥️</div>
 
-        {% if form.errors %}
-            <p class="error">Usuário ou senha inválidos. Tente novamente.</p>
-        {% endif %}
-
-        <form method="post">
-            {% csrf_token %}
-            <div class="form-group">
-                <label for="id_username">Usuário / Matrícula</label>
-                <input type="text" name="username" id="id_username" required autofocus>
+            <div class="auth-header">
+                <p class="eyebrow">Acesso</p>
+                <h1>LabManager</h1>
             </div>
-            <div class="form-group">
-                <label for="id_password">Senha</label>
-                <input type="password" name="password" id="id_password" required>
-            </div>
-            <button type="submit" class="btn">Entrar</button>
-        </form>
 
-        <a href="{% url 'cadastrar' %}" class="signup-link">Não tem conta? Cadastre-se</a>
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="form-alert form-alert-success">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+
+            {% if form.errors %}
+                <div class="form-alert form-alert-error">Usuário ou senha inválidos. Tente novamente.</div>
+            {% endif %}
+
+            <form method="post" class="form-stack">
+                {% csrf_token %}
+
+                <div class="field">
+                    <label for="id_username">Usuário / Matrícula</label>
+                    <input type="text" name="username" id="id_username" required autofocus>
+                </div>
+
+                <div class="field">
+                    <label for="id_password">Senha</label>
+                    <input type="password" name="password" id="id_password" required>
+                </div>
+
+                <button type="submit" class="auth-button">Entrar</button>
+            </form>
+
+            <div class="auth-footer">
+                Não tem conta? <a href="{% url 'cadastrar' %}">Cadastre-se</a>
+            </div>
+        </div>
     </div>
 </body>
 </html>

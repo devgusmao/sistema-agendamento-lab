@@ -26,12 +26,14 @@ urlpatterns = [
     # --- SOLICITAÇÕES DE INSTALAÇÃO DE SOFTWARES ---
     path('computadores/<int:computador_id>/solicitar-software/', views.criar_solicitacao_instalacao, name='criar_solicitacao_instalacao'),
     path('solicitacoes/', views.listar_solicitacoes, name='listar_solicitacoes'),
+    path('solicitacoes/global/', views.criar_solicitacao_instalacao, name='criar_solicitacao_global'),
     path('solicitacoes/<int:solicitacao_id>/status/<str:novo_status>/', views.atualizar_status_solicitacao, name='atualizar_status_solicitacao'),
 
     # --- RESERVAS E AGENDAMENTOS ---
     path('agendar/<int:computador_id>/', views.criar_agendamento, name='criar_agendamento'),
     path('meus-agendamentos/', views.meus_agendamentos, name='meus_agendamentos'),
     path('gestao/agendamentos/', views.gerenciar_agendamentos, name='gerenciar_agendamentos'),
+    path('gestao/dashboard/', views.dashboard_financeiro, name='dashboard_financeiro'),
     path('agendamentos/cancelar/<int:agendamento_id>/', views.cancelar_agendamento, name='cancelar_agendamento'),
 
     # --- GESTÃO DE USUÁRIOS E PERMISSÕES ---

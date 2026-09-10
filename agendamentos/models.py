@@ -95,11 +95,19 @@ class SolicitacaoInstalacao(models.Model):
     ]
 
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='solicitacoes_instalacao')
-    computador = models.ForeignKey(Computador, on_delete=models.CASCADE, related_name='solicitacoes_instalacao')
+    computador = models.ForeignKey(Computador, on_delete=models.CASCADE, related_name='solicitacoes_instalacao', null=True, blank=True)
+    laboratorio = models.ForeignKey(Laboratorio, on_delete=models.SET_NULL, related_name='solicitacoes_instalacao', null=True, blank=True)
     software_nome = models.CharField(max_length=150, help_text="Nome e versão do software desejado")
     justificativa = models.TextField(help_text="Motivo ou finalidade do uso")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDENTE')
     data_criacao = models.DateTimeField(auto_now_add=True)
 
+    def destino_display(self):
+        if self.computador:
+            return f"{self.computador.identificador} ({self.computador.laboratorio.nome})"
+        if self.laboratorio:
+            return f"Qualquer máquina do laboratório {self.laboratorio.nome}"
+        return "Qualquer máquina"
+
     def __str__(self):
-        return f"Solicitação: {self.software_nome} para {self.computador.identificador}"
+        return f"Solicitação: {self.software_nome} para {self.destino_display()}"

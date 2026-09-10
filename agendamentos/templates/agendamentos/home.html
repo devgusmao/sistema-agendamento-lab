@@ -1,26 +1,18 @@
 {% extends 'agendamentos/base.html' %}
+{% load static %}
 
 {% block title %}Início - Painel de Máquinas{% endblock %}
 
 {% block extra_css %}
-<style>
-    .filter-bar { display: flex; gap: 1rem; background: white; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1.5rem; }
-    .pc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
-    .pc-card { background: white; border-radius: 8px; border: 1px solid #e2e8f0; padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; }
-    .badge-soft { background: #e0f2fe; color: #0369a1; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.75rem; margin-right: 0.2rem; display: inline-block; margin-bottom: 0.2rem; }
-    .btn-card { display: block; text-align: center; padding: 0.5rem; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.85rem; }
-    .btn-primary { background: var(--primary-color); color: white; }
-    .btn-sec { background: #f1f5f9; color: #334155; }
-</style>
+    <link rel="stylesheet" href="{% static 'agendamentos/css/home.css' %}">
 {% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 1.5rem;">
+<div class="page-header">
     <h2>Painel de Máquinas e Co-working</h2>
-    <p style="color: #64748b;">Consulte a disponibilidade de computadores, programas instalados e faça sua reserva.</p>
+    <p>Consulte a disponibilidade de computadores, programas instalados e faça sua reserva.</p>
 </div>
 
-<!-- Filtros de Busca -->
 <form method="get" class="filter-bar">
     <div style="flex: 1;">
         <input type="text" name="busca" class="form-control" placeholder="Buscar por máquina..." value="{{ busca }}">
@@ -43,18 +35,15 @@
     </div>
 </form>
 
-<!-- Grid de Computadores -->
 <div class="pc-grid">
     {% for pc in computadores %}
         <div class="pc-card">
             <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <h3 style="margin:0; font-size: 1.1rem; color: #0f172a;">{{ pc.identificador }}</h3>
-                    <span style="font-size: 0.8rem; font-weight: bold; background: #dcfce7; color: #166534; padding: 0.2rem 0.5rem; border-radius: 4px;">
-                        R$ {{ pc.valor_hora }}/h
-                    </span>
+                <div class="pc-topline">
+                    <h3 class="pc-title">{{ pc.identificador }}</h3>
+                    <span class="pc-price">R$ {{ pc.valor_hora }}/h</span>
                 </div>
-                <p style="color: #64748b; font-size: 0.85rem; margin: 0 0 0.8rem;">{{ pc.laboratorio.nome }}</p>
+                <p class="pc-meta">{{ pc.laboratorio.nome }}</p>
 
                 <div style="margin-bottom: 1rem;">
                     <strong style="font-size: 0.78rem; color: #475569;">Softwares Instalados:</strong>
@@ -68,9 +57,8 @@
                 </div>
             </div>
 
-            <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-                <a href="{% url 'criar_agendamento' pc.id %}" class="btn-card btn-primary" style="flex: 1;">Reservar</a>
-                <a href="{% url 'criar_solicitacao_instalacao' pc.id %}" class="btn-card btn-sec" title="Solicitar Programa">🛠️</a>
+            <div class="pc-actions">
+                <a href="{% url 'criar_agendamento' pc.id %}" class="btn-card btn-primary">Reservar</a>
             </div>
         </div>
     {% empty %}
