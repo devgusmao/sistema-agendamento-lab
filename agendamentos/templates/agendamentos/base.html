@@ -13,7 +13,6 @@
 
     <!-- Sidebar Lateral Reutilizável -->
     <aside class="sidebar">
-        {# O ícone vem de .sidebar-brand::before no CSS; repeti-lo aqui duplicava o emoji. #}
         <div class="sidebar-brand">LabManager</div>
 
         <ul class="sidebar-menu">
@@ -91,8 +90,6 @@
     <main class="main-content">
         {% if messages %}
             {% for message in messages %}
-                {# message.tags carrega o nível (success/error/warning/info); antes
-                   todo alerta era renderizado com o mesmo estilo verde. #}
                 <div class="alert alert-{{ message.tags|default:'info' }}" role="alert">
                     <span>{{ message }}</span>
                 </div>

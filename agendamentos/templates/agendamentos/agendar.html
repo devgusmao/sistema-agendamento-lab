@@ -94,8 +94,6 @@
                 </ul>
             {% endif %}
 
-            {# Este campo é obrigatório no model. Ele não era renderizado antes,
-               então TODA submissão falhava com "Este campo é obrigatório". #}
             <div class="form-group">
                 <label for="{{ form.finalidade.id_for_label }}">{{ form.finalidade.label }}</label>
                 {{ form.finalidade }}

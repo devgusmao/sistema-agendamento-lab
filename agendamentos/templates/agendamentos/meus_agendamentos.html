@@ -75,8 +75,6 @@
                             {% endif %}
                         </td>
                         <td>
-                            {# Cancelar era um link GET — qualquer página externa conseguia
-                               disparar o cancelamento. Agora é um POST com token CSRF. #}
                             <form method="post" action="{% url 'cancelar_agendamento' a.id %}" class="btn-inline-form"
                                   onsubmit="return confirm('Cancelar a reserva de {{ a.computador.identificador|escapejs }} em {{ a.data_hora_inicio|date:'d/m/Y H:i' }}?')">
                                 {% csrf_token %}

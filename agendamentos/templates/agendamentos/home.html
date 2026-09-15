@@ -55,7 +55,6 @@
             {% endfor %}
         </select>
     </div>
-    {# O filtro de status já era processado na view, mas não existia controle na tela. #}
     <div>
         <select name="status" class="form-control">
             <option value="">Qualquer status</option>
@@ -96,7 +95,6 @@
                     </div>
                 </div>
 
-                {# reservas_ativas vem do Prefetch da view — antes era calculado e descartado. #}
                 <p class="pc-reservas">
                     {% if pc.reservas_ativas %}
                         🕒 Próxima reserva: {{ pc.reservas_ativas.0.data_hora_inicio|date:"d/m H:i" }}
@@ -111,7 +109,6 @@
                 {% if pc.status == 'DISPONIVEL' %}
                     <a href="{% url 'criar_agendamento' pc.id %}" class="btn-card btn-primary">Reservar</a>
                 {% else %}
-                    {# Antes o botão aparecia sempre e a view rejeitava depois do clique. #}
                     <span class="btn-disabled" title="Máquina {{ pc.get_status_display|lower }}">Indisponível</span>
                 {% endif %}
                 <a href="{% url 'criar_solicitacao_instalacao' pc.id %}" class="btn-card btn-secondary">Pedir software</a>

@@ -57,7 +57,6 @@
                             </span>
                         </td>
                         <td>R$ {{ pc.valor_hora|floatformat:2 }}</td>
-                        {# A view já faz prefetch dos softwares; a coluna não existia. #}
                         <td>
                             {% for s in pc.softwares.all %}
                                 <span class="badge-soft">{{ s.nome }}</span>

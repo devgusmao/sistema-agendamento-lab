@@ -68,8 +68,6 @@
                             {% endif %}
                         </td>
                         <td>
-                            {# Um admin que se rebaixasse aqui perdia o acesso à própria tela.
-                               A view recusa a operação e o formulário nem é oferecido. #}
                             {% if p.usuario_id == user.id and not user.is_superuser %}
                                 <span class="bloqueado">Você não pode alterar o próprio nível.</span>
                             {% elif p.usuario.is_superuser and not user.is_superuser %}
