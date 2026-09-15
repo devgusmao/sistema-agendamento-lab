@@ -1,0 +1,403 @@
+\documentclass[12pt,a4paper]{article}
+
+% ==================================================
+% PACOTES
+% ==================================================
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{indentfirst}
+\usepackage{enumitem}
+\usepackage{times}
+\usepackage[hidelinks]{hyperref}
+
+% ==================================================
+% CONFIGURAÇÃO DA PÁGINA
+% ==================================================
+
+\geometry{
+	a4paper,
+	left=3cm,
+	right=2cm,
+	top=3cm,
+	bottom=2cm
+}
+
+% Espaçamento entre linhas
+\onehalfspacing
+
+% Recuo do primeiro parágrafo
+\setlength{\parindent}{1.25cm}
+
+% Mostrar seções, subseções e subsubseções no sumário
+\setcounter{tocdepth}{3}
+
+% ==================================================
+% INÍCIO DO DOCUMENTO
+% ==================================================
+
+\begin{document}
+	
+	% ==================================================
+	% CAPA
+	% ==================================================
+	
+	\begin{titlepage}
+		
+		\begin{center}
+			
+			{\large \textbf{UNINASSAU -- MACEIÓ}}\\[0.5cm]
+			
+			{\large Curso de Ciências da Computação}
+			
+			\vfill
+			
+			{\large
+				Cássio Vinicius\\
+				Diego de Gusmão\\
+				Erick Ayrton\\
+				Fernando Oliveira\\
+				João Matheus
+			}
+			
+			\vfill
+			
+			{\large \textbf{RELATÓRIO TÉCNICO:}\\[0.2cm]
+				\textbf{SISTEMA DE AGENDAMENTO}\\[0.3cm]
+				Arquitetura, Containerização e Segurança}
+			
+			\vfill
+			
+			Maceió -- AL\\
+			2026
+			
+		\end{center}
+		
+	\end{titlepage}
+	
+	% ==================================================
+	% FOLHA DE ROSTO
+	% ==================================================
+	
+	\begin{titlepage}
+		
+		\begin{center}
+			
+			{\large \textbf{Cássio Vinicius}}\\
+			{\large \textbf{Diego de Gusmão}}\\
+			{\large \textbf{Erick Ayrton}}\\
+			{\large \textbf{Fernando Oliveira}}\\
+			{\large \textbf{João Matheus}}
+			
+			\vfill
+			
+			{\large \textbf{RELATÓRIO TÉCNICO:}\\[0.2cm]
+				\textbf{SISTEMA DE AGENDAMENTO}\\[0.3cm]
+				Arquitetura, Containerização e Segurança}
+			
+			\vfill
+			
+			\begin{flushright}
+				
+				\begin{minipage}{0.5\textwidth}
+					
+					Relatório acadêmico/técnico apresentado à disciplina de DevSecOps Tools do curso de Ciências da Computação da UNINASSAU Maceió, como requisito para avaliação da disciplina.
+					
+				\end{minipage}
+				
+			\end{flushright}
+			
+			\vfill
+			
+			Maceió -- AL\\
+			2026
+			
+		\end{center}
+		
+	\end{titlepage}
+	
+	% ==================================================
+	% SUMÁRIO
+	% ==================================================
+	
+	\tableofcontents
+	
+	\newpage
+	
+	% ==================================================
+	% 1 INTRODUÇÃO
+	% ==================================================
+	
+	\section{Introdução}
+	
+	Este relatório técnico descreve a estruturação e a base de desenvolvimento do Sistema de Agendamento de Laboratórios, elaborado como parte das atividades da disciplina de DevSecOps Tools.
+	
+	O principal objetivo do documento é detalhar os principais aspectos do projeto, contemplando a arquitetura do sistema escolhida, o fluxo de containerização adotado para os ambientes isolados, as práticas e ferramentas de segurança aplicadas e a documentação do site desenvolvido para apresentação do projeto.
+	
+	O sistema visa promover a inclusão digital de forma estruturada e eficiente, permitindo o gerenciamento e a reserva de computadores em laboratórios através de uma interface web, suportada por um backend robusto e um banco de dados relacional seguro.
+	
+	Além da aplicação, foi desenvolvido um site utilizando o Google Sites com o objetivo de centralizar as informações do projeto, apresentar suas principais funcionalidades, tecnologias utilizadas, objetivos e cronograma de desenvolvimento.
+	
+	% ==================================================
+	% 2 ARQUITETURA DO SISTEMA
+	% ==================================================
+	
+	\section{Arquitetura do Sistema}
+	
+	O projeto adota uma arquitetura baseada no padrão MTV (Model-Template-View), provida pelo framework Django (Python), atuando em conjunto com o banco de dados relacional PostgreSQL 15.
+	
+	A estrutura de diretórios foi devidamente separada para garantir modularidade e escalabilidade:
+	
+	\begin{itemize}
+		
+		\item \textbf{agendamentos/}: Representa a aplicação principal (App) do projeto, contendo a lógica de negócios, a definição das tabelas do banco de dados (ORM) em \texttt{models.py}, a interface de administração (\texttt{admin.py}) customizada e o mapeamento das telas e rotas de visualização.
+		
+		\item \textbf{setup/}: Diretório responsável pela configuração global do projeto Django, contendo as integrações com o banco de dados PostgreSQL e o registro das aplicações instaladas (\texttt{settings.py}), bem como o roteamento principal de URLs.
+		
+	\end{itemize}
+	
+	O modelo de dados inicial, nomeado \textit{Computador}, foi estruturado para suportar os agendamentos, contendo campos como identificador único, status, registros de \texttt{data\_hora\_inicio} e \texttt{data\_hora\_fim}, além de observações gerais.
+	
+	Entre os possíveis estados de um agendamento estão CONFIRMADO, CANCELADO e CONCLUIDO.
+	
+	O framework Django é responsável pela persistência dos dados e pela integridade relacional através da execução de migrações automáticas (\textit{migrations}).
+	
+	A utilização do padrão MTV permite separar as responsabilidades da aplicação, facilitando a manutenção do código e permitindo que diferentes componentes do sistema sejam desenvolvidos e modificados de maneira organizada.
+	
+	% ==================================================
+	% 3 FLUXO DE CONTAINERIZAÇÃO
+	% ==================================================
+	
+	\section{Fluxo de Containerização}
+	
+	Um dos principais requisitos para garantir a padronização e portabilidade do sistema é a conteinerização. A infraestrutura do projeto foi isolada utilizando Docker e orquestrada pelo Docker Compose.
+	
+	O fluxo de funcionamento foi dividido em dois serviços independentes, configurados no arquivo \texttt{docker-compose.yml}:
+	
+	\begin{enumerate}
+		
+		\item \textbf{Serviço Web (Django):} Responsável por executar a aplicação web em Python. A imagem deste container é construída a partir do arquivo \texttt{Dockerfile}, que realiza a instalação das dependências declaradas no arquivo \texttt{requirements.txt}, configurando o ambiente de execução da aplicação.
+		
+		\item \textbf{Serviço DB (PostgreSQL):} Um container dedicado ao banco de dados relacional PostgreSQL 15. Os dados são persistidos utilizando volumes gerenciados pelo Docker, garantindo que as informações de agendamentos e cadastros de computadores não sejam perdidas caso o container seja reiniciado.
+		
+	\end{enumerate}
+	
+	A utilização de containers permite que o ambiente de desenvolvimento e execução seja padronizado, reduzindo problemas relacionados a diferenças de configuração entre computadores.
+	
+	O Docker Compose também facilita a inicialização dos serviços necessários para o funcionamento do sistema, permitindo que a aplicação e o banco de dados sejam executados de maneira integrada.
+	
+	% ==================================================
+	% 4 DEVSECOPS
+	% ==================================================
+	
+	\section{Ferramentas e Práticas de Segurança (DevSecOps)}
+	
+	Alinhado aos princípios da disciplina de DevSecOps Tools, o projeto incorpora desde sua base práticas fundamentais para mitigar vazamentos de dados e vulnerabilidades estruturais.
+	
+	Dentre as práticas implementadas, destacam-se:
+	
+	\begin{itemize}
+		
+		\item \textbf{Isolamento de Credenciais (.env):} A gestão de segurança das configurações sensíveis foi feita separando chaves estáticas do código-fonte. Credenciais de acesso ao banco de dados, como usuário, senha e host, e chaves de sessão secretas do Django são injetadas no ambiente por meio de variáveis presentes no arquivo \texttt{.env}.
+		
+		\item \textbf{Proteção contra Versionamento Indevido (.gitignore):} O arquivo \texttt{.gitignore} foi configurado para impedir que artefatos locais, arquivos de ambiente (\texttt{.env}) e metadados compilados sejam enviados para o repositório no GitHub, protegendo informações restritas do sistema.
+		
+		\item \textbf{Gestão de Acessos no Painel:} O painel administrativo nativo do Django (\texttt{/admin}) foi customizado para permitir o gerenciamento direto e seguro apenas por administradores autenticados, possuindo filtros de busca e exibição estruturada para não expor a interface do banco diretamente ao usuário comum.
+		
+	\end{itemize}
+	
+	A adoção dessas práticas busca incorporar a segurança desde as etapas iniciais do desenvolvimento, seguindo o princípio de integração entre desenvolvimento, operações e segurança.
+	
+	% ==================================================
+	% 5 DOCUMENTAÇÃO DO SITE
+	% ==================================================
+	
+	\section{Documentação do Site}
+	
+	Como parte do desenvolvimento do projeto, foi criado um site utilizando a plataforma Google Sites com a finalidade de apresentar e documentar o sistema LabManager.
+	
+	O site funciona como uma página de apresentação do projeto, reunindo informações sobre as tecnologias utilizadas, funcionalidades, objetivo da aplicação e cronograma de desenvolvimento.
+	
+	O endereço utilizado para a documentação e apresentação do projeto é:
+	
+	\begin{center}
+		\url{https://sites.google.com/view/labmanager-devops/inicio}
+	\end{center}
+	
+	% ==================================================
+	% 5.1 OBJETIVO DO SITE
+	% ==================================================
+	
+	\subsection{Objetivo do Site}
+	
+	O site foi desenvolvido com o objetivo de centralizar as principais informações relacionadas ao LabManager, permitindo que professores, integrantes da equipe e demais interessados tenham acesso a uma visão geral do projeto.
+	
+	A documentação apresenta de forma organizada os recursos disponíveis no sistema, sua finalidade, as tecnologias utilizadas e o andamento das etapas de desenvolvimento.
+	
+	Dessa forma, o site complementa a documentação técnica apresentada neste relatório, funcionando como um material de apoio para a compreensão do projeto.
+	
+	% ==================================================
+	% 5.2 TECNOLOGIAS UTILIZADAS
+	% ==================================================
+	
+	\subsection{Tecnologias Utilizadas}
+	
+	Na página inicial do site são apresentadas as principais tecnologias utilizadas no desenvolvimento do LabManager:
+	
+	\begin{itemize}
+		
+		\item \textbf{Django 4.2:} framework utilizado no desenvolvimento do backend da aplicação.
+		
+		\item \textbf{Python 3.11:} linguagem de programação utilizada no desenvolvimento do sistema.
+		
+		\item \textbf{PostgreSQL:} sistema gerenciador de banco de dados relacional utilizado para armazenamento das informações.
+		
+		\item \textbf{Docker:} tecnologia utilizada para a criação e execução dos containers da aplicação.
+		
+		\item \textbf{Flatpickr JS:} biblioteca JavaScript utilizada para auxiliar na seleção e manipulação de datas e horários.
+		
+	\end{itemize}
+	
+	A utilização conjunta dessas tecnologias permite estruturar uma aplicação web com separação de responsabilidades, persistência de dados, isolamento de ambientes e recursos voltados à experiência do usuário.
+	
+	% ==================================================
+	% 5.3 FUNCIONALIDADES APRESENTADAS
+	% ==================================================
+	
+	\subsection{Funcionalidades Apresentadas}
+	
+	O site apresenta quatro funcionalidades principais do LabManager.
+	
+	% --------------------------------------------------
+	% 5.3.1
+	% --------------------------------------------------
+	
+	\subsubsection{Agendamento Inteligente}
+	
+	A funcionalidade de agendamento permite o controle dos horários de utilização dos laboratórios.
+	
+	O sistema apresenta informações em tempo real, realiza o cálculo automático dos custos por hora e possui mecanismos visuais para impedir ou indicar conflitos entre horários.
+	
+	% --------------------------------------------------
+	% 5.3.2
+	% --------------------------------------------------
+	
+	\subsubsection{Inventário e Softwares}
+	
+	O módulo de inventário tem como objetivo realizar o gerenciamento do parque de computadores dos laboratórios.
+	
+	A documentação também apresenta o controle dos pacotes de software instalados em cada máquina e um painel destinado às solicitações de novas instalações.
+	
+	% --------------------------------------------------
+	% 5.3.3
+	% --------------------------------------------------
+	
+	\subsubsection{Controle de Acesso (RBAC)}
+	
+	O projeto utiliza o conceito de RBAC (\textit{Role-Based Access Control}), permitindo a divisão dos usuários em diferentes níveis de acesso.
+	
+	Entre os perfis apresentados estão:
+	
+	\begin{itemize}
+		
+		\item Alunos/Comunidade;
+		
+		\item Técnicos;
+		
+		\item Administradores.
+		
+	\end{itemize}
+	
+	Essa divisão permite estabelecer diferentes permissões de acordo com as responsabilidades de cada usuário, além de contar com um fluxo de aprovação de contas.
+	
+	% --------------------------------------------------
+	% 5.3.4
+	% --------------------------------------------------
+	
+	\subsubsection{Gestão Financeira}
+	
+	A gestão financeira permite apresentar aos usuários os custos acumulados relacionados à utilização dos recursos.
+	
+	Para os gestores, são disponibilizados relatórios consolidados relacionados ao faturamento e aos lucros, permitindo uma visão administrativa e financeira do funcionamento dos laboratórios.
+	
+	% ==================================================
+	% 5.4 OBJETIVO DO LABMANAGER
+	% ==================================================
+	
+	\subsection{Objetivo do LabManager}
+	
+	O LabManager foi desenvolvido para automatizar e otimizar o fluxo de utilização de laboratórios de informática e espaços compartilhados de tecnologia da informação.
+	
+	A proposta é centralizar reservas, controle de ativos e suporte técnico em uma única interface, reduzindo processos manuais e proporcionando maior controle administrativo e financeiro.
+	
+	A centralização dessas informações permite melhorar a organização dos recursos disponíveis e facilitar o gerenciamento dos laboratórios.
+	
+	% ==================================================
+	% 5.5 CRONOGRAMA DO PROJETO
+	% ==================================================
+	
+	\subsection{Cronograma do Projeto}
+	
+	O site também apresenta um cronograma preliminar contendo as principais etapas previstas para o desenvolvimento do projeto.
+	
+	\begin{enumerate}
+		
+		\item \textbf{Etapa 1 -- Ideação, Prototipação e Design Thinking:} etapa envolvendo levantamento de requisitos, definição do escopo e prototipação inicial das telas.
+		
+		\item \textbf{Etapa 2 -- Definição da Arquitetura do Sistema:} etapa envolvendo a escolha da stack tecnológica, incluindo Django, PostgreSQL e Docker, além da modelagem inicial do banco de dados.
+		
+		\item \textbf{Etapa 3 -- Desenvolvimento do Backend:} etapa envolvendo a implementação dos módulos de agendamento, inventário e controle de acesso (RBAC).
+		
+		\item \textbf{Etapa 4 -- Desenvolvimento do Frontend:} etapa destinada à construção das interfaces de usuário e integração com o backend.
+		
+		\item \textbf{Etapa 5 -- Testes e Ajustes Finais:} etapa destinada à realização de testes de integração, correção de possíveis falhas e revisão das práticas de segurança.
+		
+		\item \textbf{Etapa 6 -- Apresentação Final:} etapa destinada à entrega da documentação completa e apresentação do sistema finalizado.
+		
+	\end{enumerate}
+	
+	O cronograma apresentado no site é preliminar e pode sofrer alterações ao longo do desenvolvimento do projeto, de acordo com as necessidades identificadas pela equipe.
+	
+	% ==================================================
+	% 5.6 INTEGRAÇÃO ENTRE SITE E PROJETO
+	% ==================================================
+	
+	\subsection{Integração entre o Site e o Projeto}
+	
+	O site atua como uma extensão da documentação técnica do LabManager.
+	
+	Enquanto este relatório apresenta de maneira detalhada a arquitetura, a containerização e as práticas de segurança, o site oferece uma apresentação mais visual e resumida do projeto.
+	
+	Essa integração facilita a apresentação do trabalho acadêmico, pois permite que as informações técnicas sejam complementadas por uma interface acessível e organizada.
+	
+	Dessa forma, o site contribui para a comunicação do projeto e permite apresentar de maneira objetiva as tecnologias, funcionalidades, objetivos e etapas de desenvolvimento do sistema.
+	
+	% ==================================================
+	% 6 CONCLUSÃO
+	% ==================================================
+	
+	\section{Conclusão}
+	
+	O relatório demonstrou a adequação do sistema de agendamentos às boas práticas de Engenharia de Software e DevSecOps.
+	
+	A separação de responsabilidades por meio da arquitetura baseada em Django, associada à utilização de containers com Docker Compose, contribui para simplificar as fases de desenvolvimento, configuração e implantação do sistema.
+	
+	O uso de variáveis de ambiente assegura que as regras de segurança sejam respeitadas, evitando a exposição de chaves e senhas da infraestrutura.
+	
+	As práticas relacionadas ao controle de acesso, proteção de credenciais e utilização do arquivo \texttt{.gitignore} também contribuem para estabelecer uma base mais segura para o projeto.
+	
+	Além da aplicação, a criação do site LabManager permitiu centralizar e apresentar as principais informações do sistema, incluindo suas tecnologias, funcionalidades, objetivos e cronograma de desenvolvimento.
+	
+	Com isso, o projeto possui não apenas uma estrutura técnica baseada em Django, PostgreSQL e Docker, mas também uma documentação complementar voltada à apresentação e compreensão da solução.
+	
+	O conjunto dessas características forma um alicerce organizado para as próximas etapas de desenvolvimento do sistema de agendamento de laboratórios, permitindo sua evolução com foco em segurança, organização, escalabilidade e facilidade de manutenção.
+	
+	% ==================================================
+	% FIM DO DOCUMENTO
+	% ==================================================
+	
+\end{document}
+```
