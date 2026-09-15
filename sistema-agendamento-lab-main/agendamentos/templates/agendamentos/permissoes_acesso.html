@@ -1,0 +1,97 @@
+{% extends 'agendamentos/base.html' %}
+
+{% block title %}Permissões de Acesso{% endblock %}
+
+{% block extra_css %}
+<style>
+    .table-card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--panel-border); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 0.9rem 1.1rem; text-align: left; border-bottom: 1px solid var(--panel-border); font-size: 0.88rem; }
+    th { background-color: #f8fafc; font-weight: 600; color: #475569; }
+
+    .user-info-text { font-weight: 600; color: #0f172a; }
+    .user-email-text { font-size: 0.8rem; color: var(--muted-text); display: block; }
+
+    .select-tipo { padding: 0.45rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem; background-color: #fff; color: #334155; }
+
+    .btn-salvar { background-color: var(--primary-color); color: white; border: none; padding: 0.45rem 0.9rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600; margin-left: 0.5rem; }
+    .btn-salvar:hover { background-color: var(--primary-hover); }
+
+    .badge-role { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.74rem; font-weight: 700; }
+    .role-admin { background-color: var(--warning-bg); color: var(--warning-text); }
+    .role-tecnico { background-color: var(--info-bg); color: var(--info-text); }
+    .role-aluno { background-color: #f1f5f9; color: #475569; }
+    .tag-superuser { font-size: 0.75rem; color: #2563eb; font-weight: bold; margin-left: 0.3rem; }
+    .bloqueado { color: var(--muted-text); font-size: 0.83rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Permissões de Acesso</h1>
+    <p>Gerencie o tipo de perfil e os privilégios dos usuários no sistema.</p>
+</div>
+
+<div class="alert alert-info">
+    <span>
+        <strong>Aluno</strong> reserva máquinas e pede softwares. <strong>Técnico</strong> também gerencia
+        laboratórios, máquinas e inventário. <strong>Administrador</strong> acumula tudo isso mais a gestão
+        de usuários, reservas e o dashboard financeiro.
+    </span>
+</div>
+
+<div class="table-card">
+    {% if perfis %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Usuário</th>
+                    <th>Perfil Atual</th>
+                    <th>Alterar Nível de Permissão</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in perfis %}
+                    <tr>
+                        <td>
+                            <span class="user-info-text">{{ p.usuario.username }}</span>
+                            {% if p.usuario.is_superuser %}<span class="tag-superuser">(Superuser)</span>{% endif %}
+                            <span class="user-email-text">{{ p.usuario.email|default:"Sem e-mail" }}</span>
+                        </td>
+                        <td>
+                            {% if p.usuario.is_superuser %}
+                                <span class="badge-role role-admin">Administrador Master</span>
+                            {% else %}
+                                <span class="badge-role {% if p.tipo == 'ADMIN' %}role-admin{% elif p.tipo == 'TECNICO' %}role-tecnico{% else %}role-aluno{% endif %}">
+                                    {{ p.get_tipo_display }}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if p.usuario_id == user.id and not user.is_superuser %}
+                                <span class="bloqueado">Você não pode alterar o próprio nível.</span>
+                            {% elif p.usuario.is_superuser and not user.is_superuser %}
+                                <span class="bloqueado">Somente um superusuário pode alterar este perfil.</span>
+                            {% else %}
+                                <form method="post" style="display: flex; align-items: center; margin: 0;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="perfil_id" value="{{ p.id }}">
+                                    <select name="novo_tipo" class="select-tipo">
+                                        {% for valor, rotulo in tipo_choices %}
+                                            <option value="{{ valor }}" {% if p.tipo == valor %}selected{% endif %}>{{ rotulo }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="submit" class="btn-salvar">Atualizar</button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% include 'agendamentos/_paginacao.html' with page_obj=perfis %}
+    {% else %}
+        <p class="empty-state">Nenhum perfil encontrado.</p>
+    {% endif %}
+</div>
+{% endblock %}

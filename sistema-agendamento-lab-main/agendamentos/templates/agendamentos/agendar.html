@@ -1,0 +1,232 @@
+{% extends 'agendamentos/base.html' %}
+
+{% block title %}Reservar {{ computador.identificador }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+<style>
+    .agendar-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+    @media (max-width: 900px) { .agendar-grid { grid-template-columns: 1fr; } }
+
+    .card-box {
+        background: var(--card-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 14px;
+        padding: 1.5rem;
+        box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);
+    }
+
+    .machine-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+    .machine-head h2 { margin: 0; font-size: 1.35rem; color: #0f172a; }
+    .price-tag { background: var(--primary-soft); color: var(--primary-color-dark); font-weight: 800; padding: 0.35rem 0.75rem; border-radius: 999px; font-size: 0.9rem; }
+
+    .badge-soft { display: inline-block; background: #f1f5f9; color: #334155; border-radius: 999px; padding: 0.2rem 0.6rem; font-size: 0.75rem; margin: 0.15rem 0.15rem 0 0; }
+
+    .form-group { margin-bottom: 1.1rem; }
+    .form-group label { display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.88rem; color: #334155; }
+    .form-control { width: 100%; padding: 0.6rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; background: #fff; }
+    .form-help { display: block; font-size: 0.78rem; color: var(--muted-text); margin-top: 0.3rem; }
+
+    .btn-confirmar { width: 100%; padding: 0.85rem; background-color: #16a34a; border: none; color: white; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 700; }
+    .btn-confirmar:hover { background-color: #15803d; }
+    .btn-voltar { display: block; text-align: center; margin-top: 0.85rem; color: var(--muted-text); }
+
+    .errorlist { list-style: none; margin: 0 0 1rem; padding: 0.85rem 1rem; background: var(--danger-bg); color: var(--danger-text); border: 1px solid #fecaca; border-radius: 10px; font-size: 0.88rem; }
+    .errorlist li + li { margin-top: 0.35rem; }
+
+    .info-regra { font-size: 0.85rem; color: var(--info-text); background-color: var(--info-bg); padding: 0.75rem 0.9rem; border-radius: 10px; margin-bottom: 1.2rem; border-left: 4px solid var(--primary-color); }
+
+    .resumo { margin: 1rem 0; padding: 0.9rem 1rem; border-radius: 10px; background: #f8fafc; border: 1px dashed #cbd5e1; font-size: 0.9rem; }
+    .resumo strong { color: #0f172a; }
+    .resumo-total { font-size: 1.15rem; font-weight: 800; color: #166534; }
+
+    .calendar-day { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 0.65rem 0.75rem; margin-bottom: 0.5rem; }
+    .day-label { display: block; margin-bottom: 0.4rem; font-weight: 700; color: var(--warning-text); font-size: 0.85rem; }
+    .slot-list { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .slot-pill { background: #fde68a; color: var(--warning-text); border-radius: 999px; padding: 0.22rem 0.55rem; font-size: 0.75rem; font-weight: 700; }
+    .livre { color: var(--success-text); font-size: 0.9rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Reservar Máquina</h1>
+    <p>Escolha o horário e a finalidade do uso. Conflitos com reservas existentes são bloqueados automaticamente.</p>
+</div>
+
+<div class="agendar-grid">
+    <div class="card-box">
+        <div class="machine-head">
+            <h2>{{ computador.identificador }}</h2>
+            <span class="price-tag">R$ {{ computador.valor_hora|floatformat:2 }} / hora</span>
+        </div>
+        <p style="margin: 0 0 1rem; color: var(--muted-text); font-size: 0.9rem;">
+            {{ computador.laboratorio.nome }}
+        </p>
+
+        {% if computador.softwares.all %}
+            <div style="margin-bottom: 1.25rem;">
+                <strong style="font-size: 0.8rem; color: #475569;">Softwares instalados:</strong><br>
+                {% for s in computador.softwares.all %}
+                    <span class="badge-soft">{{ s }}</span>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="info-regra">
+            <strong>Regras:</strong> o limite por reserva é de <strong>2 horas</strong> e a antecedência máxima é de
+            <strong>30 dias</strong>. O horário final é sugerido automaticamente e pode ser reduzido.
+        </div>
+
+        <form method="post" id="form-agendamento" novalidate>
+            {% csrf_token %}
+
+            {% if form.errors %}
+                <ul class="errorlist">
+                    {% for error in form.non_field_errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                            <li>{{ field.label }}: {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+            <div class="form-group">
+                <label for="{{ form.finalidade.id_for_label }}">{{ form.finalidade.label }}</label>
+                {{ form.finalidade }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.data_hora_inicio.id_for_label }}">{{ form.data_hora_inicio.label }}</label>
+                {{ form.data_hora_inicio }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.data_hora_fim.id_for_label }}">{{ form.data_hora_fim.label }}</label>
+                {{ form.data_hora_fim }}
+                <span class="form-help">Preenchido com 2 horas após o início; ajuste para menos se precisar.</span>
+            </div>
+
+            <div class="resumo" id="resumo" hidden>
+                Duração: <strong id="resumo-duracao">—</strong><br>
+                Valor estimado: <span class="resumo-total" id="resumo-valor">R$ 0,00</span>
+            </div>
+
+            <button type="submit" class="btn-confirmar">Confirmar Reserva</button>
+        </form>
+        <a href="{% url 'home' %}" class="btn-voltar">Voltar ao painel</a>
+    </div>
+
+    <div class="card-box">
+        <h3 style="margin-top: 0; font-size: 1.05rem; color: #0f172a;">📅 Horários já reservados</h3>
+        {% if reservas_existentes %}
+            {% regroup reservas_existentes by data_hora_inicio|date:"d/m/Y" as reservas_por_dia %}
+            {% for dia in reservas_por_dia %}
+                <div class="calendar-day">
+                    <span class="day-label">{{ dia.grouper }}</span>
+                    <div class="slot-list">
+                        {% for r in dia.list %}
+                            <span class="slot-pill">{{ r.data_hora_inicio|date:"H:i" }} – {{ r.data_hora_fim|date:"H:i" }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="livre">Esta máquina está totalmente livre.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ reservas_json|json_script:"reservas-data" }}
+
+<!-- Versões fixadas e locale a partir do mesmo CDN. O script de idioma
+     apontava para um host inexistente (https://npmcdn.flatpickr/...), o que
+     fazia o flatpickr inicializar sem o locale "pt". -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/pt.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const VALOR_HORA = parseFloat("{{ computador.valor_hora|stringformat:'s' }}") || 0;
+    const MAX_MS = 2 * 60 * 60 * 1000;
+
+    const el = document.getElementById('reservas-data');
+    const reservas = el ? JSON.parse(el.textContent) : [];
+    const ocupados = reservas.map(r => ({ de: new Date(r.from.replace(' ', 'T')), ate: new Date(r.to.replace(' ', 'T')) }));
+
+    if (window.flatpickr && flatpickr.l10ns && flatpickr.l10ns.pt) {
+        flatpickr.localize(flatpickr.l10ns.pt);
+    }
+
+    const base = {
+        enableTime: true,
+        dateFormat: "Y-m-d H:i",
+        altInput: true,
+        altFormat: "d/m/Y H:i",
+        time_24hr: true,
+        minuteIncrement: 15,
+        minDate: "today",
+        maxDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    };
+
+    // O `disable` do flatpickr com intervalos {from, to} bloqueia o DIA inteiro,
+    // então uma reserva de 1h tornava o dia todo indisponível. Aqui os horários
+    // ocupados são apenas destacados e a validação de sobreposição é feita no
+    // servidor, que é onde ela precisa acontecer de qualquer forma.
+    function marcarOcupado(dayElem) {
+        const dia = dayElem.dateObj;
+        const temReserva = ocupados.some(o =>
+            o.de.getFullYear() === dia.getFullYear() &&
+            o.de.getMonth() === dia.getMonth() &&
+            o.de.getDate() === dia.getDate()
+        );
+        if (temReserva) {
+            dayElem.style.boxShadow = 'inset 0 -3px 0 #f59e0b';
+            dayElem.title = 'Este dia já possui reservas';
+        }
+    }
+
+    const pickerFim = flatpickr("#id_data_hora_fim", { ...base, onDayCreate: (d, s, i, el) => marcarOcupado(el), onChange: atualizarResumo });
+
+    const pickerInicio = flatpickr("#id_data_hora_inicio", {
+        ...base,
+        onDayCreate: (d, s, i, el) => marcarOcupado(el),
+        onChange: function (selectedDates) {
+            if (!selectedDates.length) return;
+            const inicio = selectedDates[0];
+            pickerFim.set('minDate', inicio);
+            pickerFim.set('maxDate', new Date(inicio.getTime() + MAX_MS));
+
+            const fimAtual = pickerFim.selectedDates[0];
+            if (!fimAtual || fimAtual <= inicio || fimAtual - inicio > MAX_MS) {
+                pickerFim.setDate(new Date(inicio.getTime() + MAX_MS), true);
+            }
+            atualizarResumo();
+        }
+    });
+
+    function atualizarResumo() {
+        const inicio = pickerInicio.selectedDates[0];
+        const fim = pickerFim.selectedDates[0];
+        const box = document.getElementById('resumo');
+        if (!inicio || !fim || fim <= inicio) { box.hidden = true; return; }
+
+        const horas = (fim - inicio) / 3600000;
+        const h = Math.floor(horas);
+        const m = Math.round((horas - h) * 60);
+        document.getElementById('resumo-duracao').textContent =
+            (h ? h + 'h' : '') + (m ? ' ' + m + 'min' : (h ? '' : '0min'));
+        document.getElementById('resumo-valor').textContent =
+            'R$ ' + (horas * VALOR_HORA).toFixed(2).replace('.', ',');
+        box.hidden = false;
+    }
+
+    atualizarResumo();
+});
+</script>
+{% endblock %}

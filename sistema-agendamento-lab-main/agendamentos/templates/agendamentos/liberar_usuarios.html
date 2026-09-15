@@ -1,0 +1,116 @@
+{% extends 'agendamentos/base.html' %}
+
+{% block title %}Aprovação de Usuários{% endblock %}
+
+{% block extra_css %}
+<style>
+    .section-title { margin: 2rem 0 0.85rem; font-size: 1.05rem; color: #0f172a; }
+    .section-title:first-of-type { margin-top: 0; }
+
+    .table-card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--panel-border); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 0.9rem 1.1rem; text-align: left; border-bottom: 1px solid var(--panel-border); font-size: 0.88rem; }
+    th { background-color: #f8fafc; font-weight: 600; color: #475569; }
+
+    .badge-role { display: inline-block; padding: 0.22rem 0.55rem; border-radius: 999px; font-size: 0.74rem; font-weight: 700; }
+    .role-admin { background-color: var(--warning-bg); color: var(--warning-text); }
+    .role-tecnico { background-color: var(--info-bg); color: var(--info-text); }
+    .role-aluno { background-color: #f1f5f9; color: #475569; }
+
+    .btn-aprovar, .btn-revogar {
+        color: white; padding: 0.4rem 0.8rem; border-radius: 6px; border: none;
+        font-weight: 600; font-size: 0.8rem; cursor: pointer;
+    }
+    .btn-aprovar { background-color: #16a34a; }
+    .btn-aprovar:hover { background-color: #15803d; }
+    .btn-revogar { background-color: #ef4444; }
+    .btn-revogar:hover { background-color: #dc2626; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Aprovação de Novos Usuários</h1>
+    <p>Libere o acesso dos cadastros pendentes e revise quem já está ativo no sistema.</p>
+</div>
+
+<h2 class="section-title">Aguardando liberação ({{ pendentes|length }})</h2>
+<div class="table-card">
+    {% if pendentes %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Usuário</th>
+                    <th>E-mail</th>
+                    <th>Cadastrado em</th>
+                    <th>Ação</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in pendentes %}
+                    <tr>
+                        <td><strong>{{ p.usuario.username }}</strong></td>
+                        <td>{{ p.usuario.email|default:"Sem e-mail cadastrado" }}</td>
+                        <td>{{ p.usuario.date_joined|date:"d/m/Y H:i" }}</td>
+                        <td>
+                            <form method="post" action="{% url 'aprovar_usuario' p.id %}" class="btn-inline-form">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-aprovar">Aprovar Acesso</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="empty-state">Nenhum usuário pendente no momento.</p>
+    {% endif %}
+</div>
+
+<h2 class="section-title">Acessos ativos ({{ aprovados|length }})</h2>
+<div class="table-card">
+    {% if aprovados %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Usuário</th>
+                    <th>E-mail</th>
+                    <th>Perfil</th>
+                    <th>Ação</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in aprovados %}
+                    <tr>
+                        <td>
+                            <strong>{{ p.usuario.username }}</strong>
+                            {% if p.usuario.is_superuser %}<span style="color:#2563eb; font-size:0.75rem; font-weight:700;"> (Superuser)</span>{% endif %}
+                        </td>
+                        <td>{{ p.usuario.email|default:"—" }}</td>
+                        <td>
+                            <span class="badge-role {% if p.tipo == 'ADMIN' %}role-admin{% elif p.tipo == 'TECNICO' %}role-tecnico{% else %}role-aluno{% endif %}">
+                                {{ p.get_tipo_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if p.usuario_id == user.id %}
+                                <span style="color:#94a3b8; font-size:0.82rem;">Você</span>
+                            {% elif p.usuario.is_superuser %}
+                                <span style="color:#94a3b8; font-size:0.82rem;">Protegido</span>
+                            {% else %}
+                                <form method="post" action="{% url 'revogar_usuario' p.id %}" class="btn-inline-form"
+                                      onsubmit="return confirm('Revogar o acesso de {{ p.usuario.username|escapejs }}?')">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-revogar">Revogar</button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="empty-state">Nenhum usuário aprovado ainda.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends 'agendamentos/base.html' %}
+
+{% block title %}Laboratórios{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .btn-novo { background-color: var(--primary-color); color: white; padding: 0.7rem 1.2rem; border-radius: 8px; font-weight: 600; font-size: 0.9rem; }
+    .btn-novo:hover { background-color: var(--primary-hover); text-decoration: none; }
+
+    .table-card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--panel-border); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 0.9rem 1.1rem; text-align: left; border-bottom: 1px solid var(--panel-border); font-size: 0.88rem; }
+    th { background-color: #f8fafc; font-weight: 600; color: #475569; }
+
+    .acoes { display: flex; gap: 0.75rem; align-items: center; }
+    .btn-editar { color: var(--primary-color); font-weight: 600; }
+    .aviso-lotacao { font-size: 0.78rem; color: var(--warning-text); display: block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Laboratórios</h1>
+        <p>Gerencie os espaços físicos do sistema.</p>
+    </div>
+    <a href="{% url 'cadastrar_laboratorio' %}" class="btn-novo">+ Novo Laboratório</a>
+</div>
+
+<div class="table-card">
+    {% if laboratorios %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Capacidade</th>
+                    <th>Máquinas cadastradas</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lab in laboratorios %}
+                    <tr>
+                        <td>
+                            <strong>{{ lab.nome }}</strong>
+                            {% if lab.descricao %}
+                                <span style="display:block; font-size:0.8rem; color:var(--muted-text);">{{ lab.descricao|truncatechars:70 }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ lab.capacidade }}</td>
+                        <td>
+                            {{ lab.total_maquinas }}
+                            {% if lab.capacidade and lab.total_maquinas > lab.capacidade %}
+                                <span class="aviso-lotacao">⚠️ acima da capacidade declarada</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="acoes">
+                                <a href="{% url 'editar_laboratorio' lab.id %}" class="btn-editar">✏️ Editar</a>
+                                {% if user.is_superuser or user.perfil.tipo == 'ADMIN' %}
+                                    {% if lab.total_maquinas == 0 %}
+                                        <form method="post" action="{% url 'excluir_laboratorio' lab.id %}" class="btn-inline-form"
+                                              onsubmit="return confirm('Excluir o laboratório {{ lab.nome|escapejs }}?')">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn-as-link">Excluir</button>
+                                        </form>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="empty-state">Nenhum laboratório cadastrado.</p>
+    {% endif %}
+</div>
+{% endblock %}

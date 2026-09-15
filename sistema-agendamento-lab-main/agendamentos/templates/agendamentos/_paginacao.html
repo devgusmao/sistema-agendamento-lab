@@ -1,0 +1,17 @@
+{% comment %}
+Paginação reutilizável. Preserva os filtros da querystring ao trocar de página.
+Espera a variável `page_obj` (um objeto Page do Django).
+{% endcomment %}
+{% if page_obj.paginator.num_pages > 1 %}
+    <nav class="pagination" aria-label="Paginação">
+        {% if page_obj.has_previous %}
+            <a href="?{% for k, v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v|urlencode }}&amp;{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">&laquo; Anterior</a>
+        {% endif %}
+
+        <span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }} &middot; {{ page_obj.paginator.count }} registro{{ page_obj.paginator.count|pluralize }}</span>
+
+        {% if page_obj.has_next %}
+            <a href="?{% for k, v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v|urlencode }}&amp;{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">Próxima &raquo;</a>
+        {% endif %}
+    </nav>
+{% endif %}

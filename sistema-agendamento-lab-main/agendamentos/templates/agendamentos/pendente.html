@@ -1,0 +1,43 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acesso Pendente - LabManager</title>
+    <link rel="stylesheet" href="{% static 'agendamentos/css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'agendamentos/css/auth.css' %}">
+    <style>
+        .pendente-shell { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
+        .pendente-card {
+            background: #fff; padding: 2.5rem 2rem; border-radius: 16px;
+            box-shadow: var(--shadow-soft); text-align: center; max-width: 460px;
+        }
+        .pendente-card h2 { margin-top: 0; color: #0f172a; }
+        .pendente-card p { color: var(--muted-text); line-height: 1.55; }
+        .btn-logout {
+            background-color: #ef4444; color: white; border: none;
+            padding: 0.7rem 1.4rem; border-radius: 8px; cursor: pointer;
+            margin-top: 1.25rem; font-weight: 700;
+        }
+        .btn-logout:hover { background-color: #dc2626; }
+    </style>
+</head>
+<body>
+    <div class="pendente-shell">
+        <div class="pendente-card">
+            <div style="font-size: 2.5rem;">⏳</div>
+            <h2>Cadastro pendente de liberação</h2>
+            <p>
+                Olá, <strong>{{ user.username }}</strong>. Sua conta foi criada, mas precisa da aprovação
+                de um administrador antes de você conseguir reservar máquinas ou solicitar softwares.
+            </p>
+            <p><small>Procure o responsável pelo laboratório para liberar o acesso.</small></p>
+            <form action="{% url 'logout' %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn-logout">Sair do Sistema</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

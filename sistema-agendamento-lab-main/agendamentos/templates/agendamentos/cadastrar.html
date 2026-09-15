@@ -1,0 +1,70 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro - Agendamento de Laboratórios</title>
+    <link rel="stylesheet" href="{% static 'agendamentos/css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'agendamentos/css/auth.css' %}">
+</head>
+<body class="auth-page">
+    <div class="auth-shell">
+        <div class="auth-card">
+            <div class="auth-brand">✅</div>
+
+            <div class="auth-header">
+                <p class="eyebrow">Cadastro</p>
+                <h1>Crie sua conta</h1>
+            </div>
+
+            <form method="post" class="form-stack">
+                {% csrf_token %}
+
+                {% if form.errors %}
+                    <ul class="errorlist">
+                        {% for field in form %}
+                            {% for error in field.errors %}
+                                <li>{{ field.label }}: {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                        {% for error in form.non_field_errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+
+                <div class="field">
+                    <label for="id_username">Usuário / Matrícula</label>
+                    <input type="text" name="username" id="id_username" required autofocus value="{{ form.username.value|default:'' }}">
+                    <span class="form-help">Obrigatório. Máximo de 150 caracteres (letras, números e @/./+/-/_).</span>
+                </div>
+
+                <div class="field">
+                    <label for="id_email">E-mail Institucional</label>
+                    <input type="email" name="email" id="id_email" required value="{{ form.email.value|default:'' }}">
+                    <span class="form-help">Endereço de e-mail institucional obrigatório.</span>
+                </div>
+
+                <div class="field">
+                    <label for="id_password1">Senha</label>
+                    <input type="password" name="password1" id="id_password1" required>
+                    <span class="form-help">A senha deve ter pelo menos 8 caracteres e não ser totalmente numérica.</span>
+                </div>
+
+                <div class="field">
+                    <label for="id_password2">Confirme a Senha</label>
+                    <input type="password" name="password2" id="id_password2" required>
+                    <span class="form-help">Digite a mesma senha para verificação.</span>
+                </div>
+
+                <button type="submit" class="auth-button">Cadastrar</button>
+            </form>
+
+            <div class="auth-footer">
+                Já tem uma conta? <a href="{% url 'login' %}">Faça login</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

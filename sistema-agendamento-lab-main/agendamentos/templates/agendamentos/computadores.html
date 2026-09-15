@@ -1,0 +1,78 @@
+{% extends 'agendamentos/base.html' %}
+
+{% block title %}Gerenciar Máquinas{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .btn-novo { background-color: var(--primary-color); color: white; padding: 0.7rem 1.2rem; border-radius: 8px; font-weight: 600; font-size: 0.9rem; }
+    .btn-novo:hover { background-color: var(--primary-hover); text-decoration: none; }
+
+    .table-card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--panel-border); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 0.9rem 1.1rem; text-align: left; border-bottom: 1px solid var(--panel-border); font-size: 0.88rem; }
+    th { background-color: #f8fafc; font-weight: 600; color: #475569; }
+
+    .badge { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.74rem; font-weight: 700; }
+    .bg-disponivel { background-color: var(--success-bg); color: var(--success-text); }
+    .bg-manutencao { background-color: var(--warning-bg); color: var(--warning-text); }
+    .bg-inativo { background-color: var(--danger-bg); color: var(--danger-text); }
+
+    .badge-soft { display: inline-block; background: #f1f5f9; color: #334155; border-radius: 999px; padding: 0.15rem 0.5rem; font-size: 0.72rem; margin: 0.1rem 0.1rem 0 0; }
+    .btn-editar { color: var(--primary-color); font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Gerenciar Máquinas</h1>
+        <p>Lista completa de equipamentos registrados nos laboratórios.</p>
+    </div>
+    <a href="{% url 'cadastrar_computador' %}" class="btn-novo">+ Nova Máquina</a>
+</div>
+
+<div class="table-card">
+    {% if computadores %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Identificador</th>
+                    <th>Laboratório</th>
+                    <th>Status</th>
+                    <th>Valor/Hora</th>
+                    <th>Softwares</th>
+                    <th>Observações</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pc in computadores %}
+                    <tr>
+                        <td><strong>{{ pc.identificador }}</strong></td>
+                        <td>{{ pc.laboratorio.nome|default:"Não informado" }}</td>
+                        <td>
+                            <span class="badge {% if pc.status == 'DISPONIVEL' %}bg-disponivel{% elif pc.status == 'MANUTENCAO' %}bg-manutencao{% else %}bg-inativo{% endif %}">
+                                {{ pc.get_status_display }}
+                            </span>
+                        </td>
+                        <td>R$ {{ pc.valor_hora|floatformat:2 }}</td>
+                        <td>
+                            {% for s in pc.softwares.all %}
+                                <span class="badge-soft">{{ s.nome }}</span>
+                            {% empty %}
+                                <span style="color:#94a3b8;">—</span>
+                            {% endfor %}
+                        </td>
+                        <td>{{ pc.observacoes|default:"-"|truncatechars:30 }}</td>
+                        <td><a href="{% url 'editar_computador' pc.id %}" class="btn-editar">✏️ Editar</a></td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% include 'agendamentos/_paginacao.html' with page_obj=computadores %}
+    {% else %}
+        <p class="empty-state">Nenhuma máquina cadastrada.</p>
+    {% endif %}
+</div>
+{% endblock %}
