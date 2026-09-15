@@ -4,21 +4,16 @@
 
 {% block extra_css %}
 <style>
-    .page-header { margin-bottom: 1.5rem; }
-    .page-header h1 { margin: 0; font-size: 1.5rem; color: #0f172a; }
-    .page-header p { margin: 0.25rem 0 0; color: #64748b; font-size: 0.9rem; }
-
     .filter-card {
         background: var(--card-bg);
         padding: 1.25rem;
-        border-radius: 10px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        border-radius: 12px;
         margin-bottom: 1.5rem;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--panel-border);
     }
 
     .filter-form { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; }
-    .form-group-filter { flex: 1; min-width: 200px; }
+    .form-group-filter { flex: 1; min-width: 180px; }
     .form-group-filter label { display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.35rem; color: #475569; }
     .form-group-filter input, .form-group-filter select {
         width: 100%; padding: 0.55rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.9rem;
@@ -26,37 +21,24 @@
 
     .btn-filter { background-color: var(--primary-color); color: white; border: none; padding: 0.6rem 1.25rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
     .btn-filter:hover { background-color: var(--primary-hover); }
-    .btn-clear { background-color: #e2e8f0; color: #475569; text-decoration: none; padding: 0.6rem 1rem; border-radius: 6px; font-size: 0.9rem; font-weight: 600; }
+    .btn-clear { background-color: #e2e8f0; color: #475569; padding: 0.6rem 1rem; border-radius: 6px; font-size: 0.9rem; font-weight: 600; }
 
-    .table-card {
-        background: white; 
-        border-radius: 10px; 
-        border: 1px solid #e2e8f0; 
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
-        overflow: hidden;
-    }
-
+    .table-card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--panel-border); overflow: hidden; }
     table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 1rem 1.25rem; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; }
+    th, td { padding: 0.9rem 1.1rem; text-align: left; border-bottom: 1px solid var(--panel-border); font-size: 0.88rem; }
     th { background-color: #f8fafc; font-weight: 600; color: #475569; }
 
-    .badge-status { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
-    .status-confirmado { background-color: #dcfce7; color: #166534; }
-    .status-cancelado { background-color: #fee2e2; color: #991b1b; }
+    .badge-status { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.74rem; font-weight: 700; }
+    .status-confirmado { background-color: var(--success-bg); color: var(--success-text); }
+    .status-cancelado { background-color: var(--danger-bg); color: var(--danger-text); }
+    .status-encerrado { background-color: #f1f5f9; color: #475569; }
 
     .user-info-text { font-weight: 600; color: #0f172a; }
-    .user-email-text { font-size: 0.8rem; color: #64748b; display: block; }
+    .user-email-text { font-size: 0.8rem; color: var(--muted-text); display: block; }
 
-    .btn-cancelar { 
-        background-color: #ef4444; 
-        color: white; 
-        padding: 0.4rem 0.8rem; 
-        border-radius: 6px; 
-        text-decoration: none; 
-        font-weight: 600; 
-        font-size: 0.8rem; 
-        transition: background 0.2s;
-        display: inline-block;
+    .btn-cancelar {
+        background-color: #ef4444; color: white; padding: 0.4rem 0.8rem; border-radius: 6px;
+        border: none; font-weight: 600; font-size: 0.8rem; cursor: pointer;
     }
     .btn-cancelar:hover { background-color: #dc2626; }
 </style>
@@ -68,23 +50,30 @@
     <p>Visualize e gerencie todos os agendamentos realizados no sistema.</p>
 </div>
 
-<!-- Barra de Filtros -->
 <div class="filter-card">
     <form method="get" class="filter-form">
         <div class="form-group-filter">
-            <label>Buscar Usuário / Máquina</label>
-            <input type="text" name="busca" placeholder="Usuário, e-mail ou máquina..." value="{{ busca }}">
+            <label for="f-busca">Buscar Usuário / Máquina</label>
+            <input type="text" id="f-busca" name="busca" placeholder="Usuário, e-mail ou máquina..." value="{{ busca }}">
         </div>
         <div class="form-group-filter">
-            <label>Status da Reserva</label>
-            <select name="status">
+            <label for="f-status">Status da Reserva</label>
+            <select id="f-status" name="status">
                 <option value="">Todos os Status</option>
                 <option value="CONFIRMADO" {% if status_filtro == 'CONFIRMADO' %}selected{% endif %}>Confirmado</option>
                 <option value="CANCELADO" {% if status_filtro == 'CANCELADO' %}selected{% endif %}>Cancelado</option>
             </select>
         </div>
+        <div class="form-group-filter">
+            <label for="f-periodo">Período</label>
+            <select id="f-periodo" name="periodo">
+                <option value="">Todos os períodos</option>
+                <option value="futuros" {% if periodo == 'futuros' %}selected{% endif %}>Vigentes / futuros</option>
+                <option value="passados" {% if periodo == 'passados' %}selected{% endif %}>Já encerrados</option>
+            </select>
+        </div>
         <button type="submit" class="btn-filter">Filtrar</button>
-        {% if busca or status_filtro %}
+        {% if busca or status_filtro or periodo %}
             <a href="{% url 'gerenciar_agendamentos' %}" class="btn-clear">Limpar</a>
         {% endif %}
     </form>
@@ -99,6 +88,8 @@
                     <th>Máquina</th>
                     <th>Início</th>
                     <th>Término</th>
+                    <th>Finalidade</th>
+                    <th>Valor</th>
                     <th>Status</th>
                     <th>Ações</th>
                 </tr>
@@ -110,27 +101,43 @@
                             <span class="user-info-text">{{ a.usuario.username }}</span>
                             <span class="user-email-text">{{ a.usuario.email|default:"sem e-mail" }}</span>
                         </td>
-                        <td><strong>{{ a.computador.identificador }}</strong></td>
+                        <td>
+                            <strong>{{ a.computador.identificador }}</strong>
+                            <span class="user-email-text">{{ a.computador.laboratorio.nome }}</span>
+                        </td>
                         <td>{{ a.data_hora_inicio|date:"d/m/Y H:i" }}</td>
                         <td>{{ a.data_hora_fim|date:"d/m/Y H:i" }}</td>
+                        <td>{{ a.get_finalidade_display }}</td>
+                        <td>R$ {{ a.valor_total|floatformat:2 }}</td>
                         <td>
-                            <span class="badge-status {% if a.status == 'CONFIRMADO' %}status-confirmado{% else %}status-cancelado{% endif %}">
-                                {{ a.get_status_display }}
-                            </span>
+                            {% if a.status == 'CANCELADO' %}
+                                <span class="badge-status status-cancelado">Cancelado</span>
+                            {% elif a.data_hora_fim < agora %}
+                                <span class="badge-status status-encerrado">Encerrado</span>
+                            {% else %}
+                                <span class="badge-status status-confirmado">Confirmado</span>
+                            {% endif %}
                         </td>
                         <td>
-                            {% if a.status == 'CONFIRMADO' %}
-                                <a href="{% url 'cancelar_agendamento' a.id %}?from=admin" class="btn-cancelar" onclick="return confirm('Tem certeza que deseja cancelar o agendamento deste usuário?')">Cancelar Reserva</a>
+                            {# Só reservas confirmadas e ainda não encerradas podem ser canceladas. #}
+                            {% if a.status == 'CONFIRMADO' and a.data_hora_fim >= agora %}
+                                <form method="post" action="{% url 'cancelar_agendamento' a.id %}" class="btn-inline-form"
+                                      onsubmit="return confirm('Cancelar a reserva de {{ a.usuario.username|escapejs }}?')">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="origem" value="admin">
+                                    <button type="submit" class="btn-cancelar">Cancelar</button>
+                                </form>
                             {% else %}
-                                -
+                                <span style="color:#94a3b8;">—</span>
                             {% endif %}
                         </td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
+        {% include 'agendamentos/_paginacao.html' with page_obj=agendamentos %}
     {% else %}
-        <p style="padding: 2rem; margin: 0; color: #64748b;">Nenhuma reserva encontrada com os filtros informados.</p>
+        <p class="empty-state">Nenhuma reserva encontrada com os filtros informados.</p>
     {% endif %}
 </div>
 {% endblock %}

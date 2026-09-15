@@ -1,162 +1,81 @@
 {% extends 'agendamentos/base.html' %}
 
-{% block title %}Dashboard de Solicitações{% endblock %}
+{% block title %}{% if is_gestor %}Solicitações de Software{% else %}Minhas Solicitações{% endif %}{% endblock %}
 
 {% block extra_css %}
 <style>
-    .page-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .page-header h2 {
-        margin: 0;
-        color: #0f172a;
-    }
-
-    .page-header p {
-        margin: 0.3rem 0 0;
-        color: #64748b;
-    }
-
+    .page-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
     .btn-primary {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0.75rem 1rem;
-        border-radius: 8px;
-        background: linear-gradient(135deg, #2563eb, #1d4ed8);
-        color: #fff;
-        text-decoration: none;
-        font-weight: 700;
-        box-shadow: 0 8px 20px rgba(37, 99, 235, 0.2);
+        display: inline-flex; align-items: center; justify-content: center;
+        padding: 0.7rem 1.1rem; border-radius: 8px;
+        background: var(--primary-color); color: #fff; font-weight: 700;
     }
+    .btn-primary:hover { background: var(--primary-hover); text-decoration: none; }
 
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-    }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .stat-card { background: var(--card-bg); border: 1px solid var(--panel-border); border-radius: 14px; padding: 1rem 1.1rem; }
+    .stat-card.is-active { border-color: var(--primary-color); box-shadow: 0 0 0 2px var(--primary-soft); }
+    .stat-card:hover { text-decoration: none; }
+    .stat-label { display: block; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted-text); margin-bottom: 0.35rem; }
+    .stat-value { display: block; font-size: 1.7rem; font-weight: 800; color: #0f172a; }
 
-    .stat-card {
-        background: linear-gradient(135deg, #ffffff, #f8fafc);
-        border: 1px solid #e2e8f0;
-        border-radius: 14px;
-        padding: 1rem 1.1rem;
-        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.03);
-    }
+    .card-table { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--panel-border); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 0.9rem 1.1rem; text-align: left; border-bottom: 1px solid var(--panel-border); font-size: 0.87rem; vertical-align: top; }
+    th { background-color: #f8fafc; color: #475569; font-weight: 700; }
 
-    .stat-label {
-        display: block;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: #64748b;
-        margin-bottom: 0.4rem;
-    }
+    .badge-status { padding: 0.28rem 0.65rem; border-radius: 999px; font-size: 0.74rem; font-weight: 700; display: inline-block; }
+    .st-pendente { background-color: var(--warning-bg); color: var(--warning-text); }
+    .st-andamento { background-color: var(--info-bg); color: var(--info-text); }
+    .st-concluido { background-color: var(--success-bg); color: var(--success-text); }
+    .st-rejeitado { background-color: var(--danger-bg); color: var(--danger-text); }
 
-    .stat-value {
-        display: block;
-        font-size: 1.8rem;
-        font-weight: 800;
-        color: #0f172a;
-    }
-
-    .card-table {
-        background: white;
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
-        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.04);
-        overflow: hidden;
-    }
-
-    table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    th, td {
-        padding: 0.9rem 1.1rem;
-        text-align: left;
-        border-bottom: 1px solid #e2e8f0;
-        font-size: 0.88rem;
-        vertical-align: top;
-    }
-
-    th {
-        background-color: #f8fafc;
-        color: #475569;
-        font-weight: 700;
-    }
-
-    .badge-status {
-        padding: 0.28rem 0.65rem;
-        border-radius: 999px;
-        font-size: 0.74rem;
-        font-weight: 700;
-        display: inline-block;
-    }
-
-    .st-pendente { background-color: #fef3c7; color: #92400e; }
-    .st-andamento { background-color: #e0f2fe; color: #0369a1; }
-    .st-concluido { background-color: #dcfce7; color: #166534; }
-    .st-rejeitado { background-color: #fee2e2; color: #991b1b; }
-
-    .btn-action {
-        display: inline-block;
-        text-decoration: none;
-        font-size: 0.76rem;
-        font-weight: 700;
-        padding: 0.38rem 0.65rem;
-        border-radius: 6px;
-        margin-right: 0.35rem;
-        color: white;
-    }
-
+    .acoes { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+    .btn-action { border: none; cursor: pointer; font-size: 0.76rem; font-weight: 700; padding: 0.4rem 0.7rem; border-radius: 6px; color: white; }
     .btn-work { background-color: #0284c7; }
     .btn-ok { background-color: #16a34a; }
     .btn-reject { background-color: #dc2626; }
-
-    .muted {
-        color: #64748b;
-    }
+    .muted { color: var(--muted-text); }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="page-header">
     <div>
-        <h2>Dashboard de Solicitações</h2>
-        <p>Acompanhe as solicitações de software por status, destino e responsável.</p>
+        <h2>{% if is_gestor %}Solicitações de Software{% else %}Minhas Solicitações{% endif %}</h2>
+        <p>
+            {% if is_gestor %}
+                Acompanhe as solicitações por status, destino e responsável.
+            {% else %}
+                Acompanhe o andamento dos programas que você pediu à equipe técnica.
+            {% endif %}
+        </p>
     </div>
     <a href="{% url 'criar_solicitacao_global' %}" class="btn-primary">+ Nova Solicitação</a>
 </div>
 
+{# Os cartões viraram filtros clicáveis por status. #}
 <div class="stats-grid">
-    <div class="stat-card">
+    <a href="{% url 'listar_solicitacoes' %}" class="stat-card {% if not status_filtro %}is-active{% endif %}">
         <span class="stat-label">Total</span>
         <span class="stat-value">{{ status_counts.total }}</span>
-    </div>
-    <div class="stat-card">
+    </a>
+    <a href="?status=PENDENTE" class="stat-card {% if status_filtro == 'PENDENTE' %}is-active{% endif %}">
         <span class="stat-label">Pendentes</span>
         <span class="stat-value">{{ status_counts.pendente }}</span>
-    </div>
-    <div class="stat-card">
+    </a>
+    <a href="?status=EM_ANDAMENTO" class="stat-card {% if status_filtro == 'EM_ANDAMENTO' %}is-active{% endif %}">
         <span class="stat-label">Em andamento</span>
         <span class="stat-value">{{ status_counts.andamento }}</span>
-    </div>
-    <div class="stat-card">
+    </a>
+    <a href="?status=CONCLUIDO" class="stat-card {% if status_filtro == 'CONCLUIDO' %}is-active{% endif %}">
         <span class="stat-label">Concluídos</span>
         <span class="stat-value">{{ status_counts.concluido }}</span>
-    </div>
-    <div class="stat-card">
+    </a>
+    <a href="?status=REJEITADO" class="stat-card {% if status_filtro == 'REJEITADO' %}is-active{% endif %}">
         <span class="stat-label">Rejeitados</span>
         <span class="stat-value">{{ status_counts.rejeitado }}</span>
-    </div>
+    </a>
 </div>
 
 <div class="card-table">
@@ -166,49 +85,78 @@
                 <tr>
                     <th>Software</th>
                     <th>Destino</th>
-                    <th>Solicitante</th>
+                    {% if is_gestor %}<th>Solicitante</th>{% endif %}
                     <th>Justificativa</th>
+                    <th>Aberta em</th>
                     <th>Status</th>
-                    {% if is_gestor %}<th>Ações de TI</th>{% endif %}
+                    <th>Ações</th>
                 </tr>
             </thead>
             <tbody>
                 {% for sol in solicitacoes %}
                     <tr>
                         <td><strong>{{ sol.software_nome }}</strong></td>
-                        <td>
-                            {% if sol.destino_display %}
-                                {{ sol.destino_display }}
-                            {% else %}
-                                <span class="muted">Não informado</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ sol.usuario.username }}</td>
+                        <td>{{ sol.destino_display }}</td>
+                        {% if is_gestor %}<td>{{ sol.usuario.username }}</td>{% endif %}
                         <td style="max-width: 280px;">{{ sol.justificativa }}</td>
+                        <td>{{ sol.data_criacao|date:"d/m/Y H:i" }}</td>
                         <td>
                             <span class="badge-status {% if sol.status == 'PENDENTE' %}st-pendente{% elif sol.status == 'EM_ANDAMENTO' %}st-andamento{% elif sol.status == 'CONCLUIDO' %}st-concluido{% else %}st-rejeitado{% endif %}">
                                 {{ sol.get_status_display }}
                             </span>
+                            {% if sol.atendido_por %}
+                                <span class="muted" style="display:block; font-size:0.75rem; margin-top:0.25rem;">por {{ sol.atendido_por.username }}</span>
+                            {% endif %}
                         </td>
-                        {% if is_gestor %}
-                            <td>
-                                {% if sol.status == 'PENDENTE' %}
-                                    <a href="{% url 'atualizar_status_solicitacao' sol.id 'EM_ANDAMENTO' %}" class="btn-action btn-work">Em Andamento</a>
+                        <td>
+                            <div class="acoes">
+                                {% if is_gestor %}
+                                    {# Cada transição é um POST com CSRF; antes eram links GET
+                                       com o status embutido na própria URL. #}
+                                    {% if sol.status == 'PENDENTE' %}
+                                        <form method="post" action="{% url 'atualizar_status_solicitacao' sol.id %}" class="btn-inline-form">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="novo_status" value="EM_ANDAMENTO">
+                                            <button type="submit" class="btn-action btn-work">Em Andamento</button>
+                                        </form>
+                                    {% endif %}
+                                    {% if sol.status != 'CONCLUIDO' %}
+                                        <form method="post" action="{% url 'atualizar_status_solicitacao' sol.id %}" class="btn-inline-form">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="novo_status" value="CONCLUIDO">
+                                            <button type="submit" class="btn-action btn-ok">Concluir</button>
+                                        </form>
+                                    {% endif %}
+                                    {% if sol.status != 'REJEITADO' and sol.status != 'CONCLUIDO' %}
+                                        <form method="post" action="{% url 'atualizar_status_solicitacao' sol.id %}" class="btn-inline-form"
+                                              onsubmit="return confirm('Rejeitar esta solicitação?')">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="novo_status" value="REJEITADO">
+                                            <button type="submit" class="btn-action btn-reject">Rejeitar</button>
+                                        </form>
+                                    {% endif %}
                                 {% endif %}
-                                {% if sol.status != 'REJEITADO' and sol.status != 'CONCLUIDO' %}
-                                    <a href="{% url 'atualizar_status_solicitacao' sol.id 'REJEITADO' %}" class="btn-action btn-reject">Rejeitar</a>
+
+                                {% if sol.usuario_id == user.id and sol.status == 'PENDENTE' %}
+                                    <form method="post" action="{% url 'cancelar_solicitacao' sol.id %}" class="btn-inline-form"
+                                          onsubmit="return confirm('Retirar esta solicitação?')">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn-as-link">Retirar</button>
+                                    </form>
                                 {% endif %}
-                                {% if sol.status != 'CONCLUIDO' %}
-                                    <a href="{% url 'atualizar_status_solicitacao' sol.id 'CONCLUIDO' %}" class="btn-action btn-ok">Concluir</a>
+
+                                {% if not is_gestor and sol.status != 'PENDENTE' %}
+                                    <span class="muted">—</span>
                                 {% endif %}
-                            </td>
-                        {% endif %}
+                            </div>
+                        </td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
+        {% include 'agendamentos/_paginacao.html' with page_obj=solicitacoes %}
     {% else %}
-        <p style="padding: 1.5rem; color: #64748b; margin: 0;">Nenhuma solicitação de software cadastrada.</p>
+        <p class="empty-state">Nenhuma solicitação de software encontrada.</p>
     {% endif %}
 </div>
 {% endblock %}

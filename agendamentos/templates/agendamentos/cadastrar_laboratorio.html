@@ -62,8 +62,15 @@
 
 {% block content %}
 <div class="page-header">
-    <h1>Cadastrar Laboratório</h1>
-    <p>Adicione um novo espaço físico para alocação de computadores.</p>
+    {# O mesmo template atende cadastro e edição; o título ficava sempre "Cadastrar". #}
+    <h1>{% if laboratorio %}Editar Laboratório{% else %}Cadastrar Laboratório{% endif %}</h1>
+    <p>
+        {% if laboratorio %}
+            Atualize os dados de "{{ laboratorio.nome }}".
+        {% else %}
+            Adicione um novo espaço físico para alocação de computadores.
+        {% endif %}
+    </p>
 </div>
 
 <div class="form-card">
@@ -93,9 +100,16 @@
             {{ form.capacidade }}
         </div>
 
+        {# O campo existe no model e no form, mas não era renderizado: não havia
+           como preencher a descrição por nenhuma tela do sistema. #}
+        <div class="form-group">
+            <label>Descrição</label>
+            {{ form.descricao }}
+        </div>
+
         <div class="form-actions">
-            <button type="submit" class="btn-submit">Salvar Laboratório</button>
-            <a href="{% url 'home' %}" class="btn-cancelar">Cancelar</a>
+            <button type="submit" class="btn-submit">{% if laboratorio %}Salvar Alterações{% else %}Salvar Laboratório{% endif %}</button>
+            <a href="{% url 'listar_laboratorios' %}" class="btn-cancelar">Cancelar</a>
         </div>
     </form>
 </div>

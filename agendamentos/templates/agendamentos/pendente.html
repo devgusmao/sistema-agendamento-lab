@@ -1,23 +1,43 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Acesso Pendente</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acesso Pendente - LabManager</title>
+    <link rel="stylesheet" href="{% static 'agendamentos/css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'agendamentos/css/auth.css' %}">
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f6f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; max-width: 400px; }
-        .btn-logout { background-color: #dc3545; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; margin-top: 1rem; }
+        .pendente-shell { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
+        .pendente-card {
+            background: #fff; padding: 2.5rem 2rem; border-radius: 16px;
+            box-shadow: var(--shadow-soft); text-align: center; max-width: 460px;
+        }
+        .pendente-card h2 { margin-top: 0; color: #0f172a; }
+        .pendente-card p { color: var(--muted-text); line-height: 1.55; }
+        .btn-logout {
+            background-color: #ef4444; color: white; border: none;
+            padding: 0.7rem 1.4rem; border-radius: 8px; cursor: pointer;
+            margin-top: 1.25rem; font-weight: 700;
+        }
+        .btn-logout:hover { background-color: #dc2626; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2>⏳ Cadastro Pendente de Liberação</h2>
-        <p>Sua conta foi criada com sucesso, mas precisa ser aprovada por um Administrador antes de realizar agendamentos.</p>
-        <p><small>Entre em contato com o responsável pelo laboratório.</small></p>
-        <form action="{% url 'logout' %}" method="post">
-            {% csrf_token %}
-            <button type="submit" class="btn-logout">Sair do Sistema</button>
-        </form>
+    <div class="pendente-shell">
+        <div class="pendente-card">
+            <div style="font-size: 2.5rem;">⏳</div>
+            <h2>Cadastro pendente de liberação</h2>
+            <p>
+                Olá, <strong>{{ user.username }}</strong>. Sua conta foi criada, mas precisa da aprovação
+                de um administrador antes de você conseguir reservar máquinas ou solicitar softwares.
+            </p>
+            <p><small>Procure o responsável pelo laboratório para liberar o acesso.</small></p>
+            <form action="{% url 'logout' %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn-logout">Sair do Sistema</button>
+            </form>
+        </div>
     </div>
 </body>
 </html>
