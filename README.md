@@ -1,5 +1,7 @@
 # 💻 Sistema de Agendamento para Laboratórios de Informática
 
+**🌐 Portal do Projeto:** [Acesse o site oficial do LabManager](https://sites.google.com/view/labmanager-devops/in%C3%ADcio)
+
 Sistema web desenvolvido em **Python + Django + PostgreSQL**, containerizado via **Docker**, voltado para a gestão e reserva de computadores em espaços comunitários, telecentros, escolas públicas e bibliotecas.
 
 O projeto busca resolver problemas comuns de filas presenciais, choque de horários e desorganização no controle de uso de computadores, promovendo a inclusão digital de forma estruturada.
@@ -12,7 +14,7 @@ O projeto busca resolver problemas comuns de filas presenciais, choque de horár
 | :---: | :--- | :--- | :---: |
 | <img src="https://github.com/devgusmao.png" width="50px" style="border-radius:50%"> | Diego de Gusmão Gaseo | Lead Developer / DevOps & Arquitetura | [@devgusmao](https://github.com/devgusmao) |
 | <img src="https://github.com/Erickzin00.png" width="50px" style="border-radius:50%"> | Erick Ayrton | Desenvolvedor Front-end | [@Erickzin00](https://github.com/Erickzin00) |
-| <img src="https://github.com/ferrnand.png" width="50px" style="border-radius:50%"> | Fernando Oliveira | QA, UX & Tech Writing | [@ferrnand](https://github.com/ferrnand) |
+| <img src="https://github.com/ferrnand.png" width="50px" style="border-radius:50%"> | Fernando Oliveira | QA, UX & Site Administrator | [@ferrnand](https://github.com/ferrnand) |
 
 ---
 
