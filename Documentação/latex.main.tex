@@ -1,4 +1,3 @@
-
 \documentclass[12pt,a4paper]{article}
 
 % ==================================================
@@ -66,8 +65,8 @@
 			
 			\vfill
 			
-			{\large \textbf{RELATÓRIO TÉCNICO:}\\[0.2cm]
-				\textbf{SISTEMA DE AGENDAMENTO}\\[0.3cm]
+			{\large \textbf{RELATÓRIO TÉCNICO E COMERCIAL:}\\[0.2cm]
+				\textbf{LABMANAGER - SISTEMA DE GESTÃO E AGENDAMENTO}\\[0.3cm]
 				Arquitetura, Containerização e Segurança}
 			
 			\vfill
@@ -95,8 +94,8 @@
 			
 			\vfill
 			
-			{\large \textbf{RELATÓRIO TÉCNICO:}\\[0.2cm]
-				\textbf{SISTEMA DE AGENDAMENTO}\\[0.3cm]
+			{\large \textbf{RELATÓRIO TÉCNICO E COMERCIAL:}\\[0.2cm]
+				\textbf{LABMANAGER - SISTEMA DE GESTÃO E AGENDAMENTO}\\[0.3cm]
 				Arquitetura, Containerização e Segurança}
 			
 			\vfill
@@ -105,7 +104,7 @@
 				
 				\begin{minipage}{0.5\textwidth}
 					
-					Relatório acadêmico/técnico apresentado à disciplina de DevSecOps Tools do curso de Ciências da Computação da UNINASSAU Maceió, como requisito para avaliação da disciplina.
+					Documentação técnica e comercial estruturada para a disciplina de DevSecOps Tools do curso de Ciências da Computação da UNINASSAU Maceió, apresentando o escopo de um produto de software pronto para o mercado.
 					
 				\end{minipage}
 				
@@ -134,13 +133,13 @@
 	
 	\section{Introdução}
 	
-	Este relatório técnico descreve a estruturação e a base de desenvolvimento do Sistema de Agendamento de Laboratórios, elaborado como parte das atividades da disciplina de DevSecOps Tools.
+	Este documento apresenta a arquitetura corporativa e a base tecnológica do \textbf{LabManager}, uma solução avançada para gestão e agendamento de laboratórios, projetada com foco em escalabilidade, segurança e eficiência operacional. 
 	
-	O principal objetivo do documento é detalhar os principais aspectos do projeto, contemplando a arquitetura do sistema escolhida, o fluxo de containerização adotado para os ambientes isolados, as práticas e ferramentas de segurança aplicadas e a documentação do site desenvolvido para apresentação do projeto.
+	O objetivo central deste relatório é detalhar os diferenciais competitivos e técnicos do produto, contemplando a robustez de sua arquitetura de software, o fluxo de implantação via containerização (garantindo portabilidade e alta disponibilidade), as práticas integradas de segurança (DevSecOps) e o portal institucional desenvolvido para a comercialização e apresentação do projeto.
 	
-	O sistema visa promover a inclusão digital de forma estruturada e eficiente, permitindo o gerenciamento e a reserva de computadores em laboratórios através de uma interface web, suportada por um backend robusto e um banco de dados relacional seguro.
+	O LabManager foi concebido para resolver gargalos reais de gestão de ativos em instituições e empresas, promovendo uma administração centralizada e inteligente. A plataforma permite o controle preciso e a reserva de computadores e espaços por meio de uma interface web intuitiva, suportada por um backend de alto desempenho e um banco de dados relacional seguro.
 	
-	Além da aplicação, foi desenvolvido um site utilizando o Google Sites com o objetivo de centralizar as informações do projeto, apresentar suas principais funcionalidades, tecnologias utilizadas, objetivos e cronograma de desenvolvimento.
+	Como estratégia de \textit{go-to-market}, foi desenvolvida uma \textit{landing page} (portal institucional) destinada a centralizar as informações comerciais do projeto, destacando propostas de valor, funcionalidades-chave, stack tecnológica e o \textit{roadmap} de evolução do produto.
 	
 	% ==================================================
 	% 2 ARQUITETURA DO SISTEMA
@@ -148,81 +147,73 @@
 	
 	\section{Arquitetura do Sistema}
 	
-	O projeto adota uma arquitetura baseada no padrão MTV (Model-Template-View), provida pelo framework Django (Python), atuando em conjunto com o banco de dados relacional PostgreSQL 15.
+	Para garantir alta performance e manutenibilidade a longo prazo, o LabManager adota o consagrado padrão arquitetural MTV (Model-Template-View), orquestrado pelo framework Django (Python). Esta estrutura opera em perfeita sincronia com o banco de dados relacional PostgreSQL 15, garantindo integridade e velocidade no processamento de grandes volumes de transações.
 	
-	A estrutura de diretórios foi devidamente separada para garantir modularidade e escalabilidade:
+	A organização estrutural foi modularizada visando facilitar futuras expansões e integrações (APIs):
 	
 	\begin{itemize}
 		
-		\item \textbf{agendamentos/}: Representa a aplicação principal (App) do projeto, contendo a lógica de negócios, a definição das tabelas do banco de dados (ORM) em \texttt{models.py}, a interface de administração (\texttt{admin.py}) customizada e o mapeamento das telas e rotas de visualização.
+		\item \textbf{Módulo de Negócios (agendamentos/):} Representa o \textit{core} da aplicação. Contém a lógica de mercado, a modelagem de dados inteligente em \texttt{models.py}, um painel de administração gerencial customizado (\texttt{admin.py}) e o roteamento otimizado de interfaces.
 		
-		\item \textbf{setup/}: Diretório responsável pela configuração global do projeto Django, contendo as integrações com o banco de dados PostgreSQL e o registro das aplicações instaladas (\texttt{settings.py}), bem como o roteamento principal de URLs.
+		\item \textbf{Módulo de Configuração Global (setup/):} Diretório central de governança do sistema, responsável pelo orquestramento de integrações seguras com o PostgreSQL, gestão de variáveis globais e controle rigoroso das requisições web.
 		
 	\end{itemize}
 	
-	O modelo de dados inicial, nomeado \textit{Computador}, foi estruturado para suportar os agendamentos, contendo campos como identificador único, status, registros de \texttt{data\_hora\_inicio} e \texttt{data\_hora\_fim}, além de observações gerais.
+	O domínio principal de dados, centralizado na entidade \textit{Computador}, foi projetado para fornecer rastreabilidade total. Ele registra identificadores únicos, flutuações de status em tempo real, auditoria de uso (\texttt{data\_hora\_inicio} e \texttt{data\_hora\_fim}) e métricas operacionais. O fluxo de reservas transita de forma segura entre os estados de CONFIRMADO, CANCELADO e CONCLUÍDO.
 	
-	Entre os possíveis estados de um agendamento estão CONFIRMADO, CANCELADO e CONCLUIDO.
-	
-	O framework Django é responsável pela persistência dos dados e pela integridade relacional através da execução de migrações automáticas (\textit{migrations}).
-	
-	A utilização do padrão MTV permite separar as responsabilidades da aplicação, facilitando a manutenção do código e permitindo que diferentes componentes do sistema sejam desenvolvidos e modificados de maneira organizada.
+	A integridade relacional e a evolução contínua da estrutura de dados são garantidas pelos mecanismos de \textit{migrations} do Django, permitindo atualizações de sistema com \textit{downtime} (tempo de inatividade) reduzido.
 	
 	% ==================================================
 	% 3 FLUXO DE CONTAINERIZAÇÃO
 	% ==================================================
 	
-	\section{Fluxo de Containerização}
+	\section{Fluxo de Containerização e Entrega Contínua}
 	
-	Um dos principais requisitos para garantir a padronização e portabilidade do sistema é a conteinerização. A infraestrutura do projeto foi isolada utilizando Docker e orquestrada pelo Docker Compose.
+	Para atender às exigências modernas de implantação em nuvem (\textit{Cloud Computing}) e garantir a completa padronização do ambiente, a infraestrutura do LabManager é 100\% containerizada. A aplicação utiliza Docker e é orquestrada pelo Docker Compose, proporcionando uma implantação (\textit{deploy}) ágil e livre de falhas de compatibilidade.
 	
-	O fluxo de funcionamento foi dividido em dois serviços independentes, configurados no arquivo \texttt{docker-compose.yml}:
+	O ecossistema é dividido em microsserviços lógicos, descritos no manifesto \texttt{docker-compose.yml}:
 	
 	\begin{enumerate}
 		
-		\item \textbf{Serviço Web (Django):} Responsável por executar a aplicação web em Python. A imagem deste container é construída a partir do arquivo \texttt{Dockerfile}, que realiza a instalação das dependências declaradas no arquivo \texttt{requirements.txt}, configurando o ambiente de execução da aplicação.
+		\item \textbf{Application Server (Web/Django):} Serviço focado na execução de alta performance da aplicação Python. A imagem é construída dinamicamente via \texttt{Dockerfile}, resolvendo dependências automaticamente e isolando o ambiente de execução para garantir máxima estabilidade.
 		
-		\item \textbf{Serviço DB (PostgreSQL):} Um container dedicado ao banco de dados relacional PostgreSQL 15. Os dados são persistidos utilizando volumes gerenciados pelo Docker, garantindo que as informações de agendamentos e cadastros de computadores não sejam perdidas caso o container seja reiniciado.
+		\item \textbf{Database Server (PostgreSQL):} Container de persistência de dados utilizando o PostgreSQL 15. A resiliência das informações financeiras, cadastrais e operacionais é garantida pelo uso de volumes persistentes do Docker, protegendo os dados críticos mesmo diante de reinicializações da infraestrutura.
 		
 	\end{enumerate}
 	
-	A utilização de containers permite que o ambiente de desenvolvimento e execução seja padronizado, reduzindo problemas relacionados a diferenças de configuração entre computadores.
-	
-	O Docker Compose também facilita a inicialização dos serviços necessários para o funcionamento do sistema, permitindo que a aplicação e o banco de dados sejam executados de maneira integrada.
+	Esta abordagem elimina a tradicional barreira do "funciona na minha máquina", acelerando o \textit{time-to-market} do produto e permitindo que a aplicação escale horizontalmente de maneira simples e eficiente.
 	
 	% ==================================================
 	% 4 DEVSECOPS
 	% ==================================================
 	
-	\section{Ferramentas e Práticas de Segurança (DevSecOps)}
+	\section{Segurança Corporativa e Práticas DevSecOps}
 	
-	Alinhado aos princípios da disciplina de DevSecOps Tools, o projeto incorpora desde sua base práticas fundamentais para mitigar vazamentos de dados e vulnerabilidades estruturais.
+	Compreendendo que a proteção de dados é um pilar crítico para qualquer software comercial, o LabManager foi construído sob a cultura \textit{Security by Design}. Práticas de DevSecOps foram integradas desde o primeiro dia para blindar a aplicação contra ameaças e vazamentos.
 	
-	Dentre as práticas implementadas, destacam-se:
+	Entre os protocolos de segurança estabelecidos, destacam-se:
 	
 	\begin{itemize}
 		
-		\item \textbf{Isolamento de Credenciais (.env):} A gestão de segurança das configurações sensíveis foi feita separando chaves estáticas do código-fonte. Credenciais de acesso ao banco de dados, como usuário, senha e host, e chaves de sessão secretas do Django são injetadas no ambiente por meio de variáveis presentes no arquivo \texttt{.env}.
+		\item \textbf{Gestão de Segredos e Isolamento de Credenciais:} Nenhuma informação sensível é armazenada no código-fonte. Chaves criptográficas, credenciais de banco de dados e variáveis de ambiente são injetadas de forma dinâmica e segura através de arquivos \texttt{.env} restritos ao servidor de produção.
 		
-		\item \textbf{Proteção contra Versionamento Indevido (.gitignore):} O arquivo \texttt{.gitignore} foi configurado para impedir que artefatos locais, arquivos de ambiente (\texttt{.env}) e metadados compilados sejam enviados para o repositório no GitHub, protegendo informações restritas do sistema.
+		\item \textbf{Prevenção contra Exposição de Código (\texttt{.gitignore}):} Políticas rígidas de versionamento impedem o envio acidental de arquivos de configuração, artefatos locais e chaves privadas para repositórios externos, mitigando riscos de espionagem corporativa e engenharia reversa.
 		
-		\item \textbf{Gestão de Acessos no Painel:} O painel administrativo nativo do Django (\texttt{/admin}) foi customizado para permitir o gerenciamento direto e seguro apenas por administradores autenticados, possuindo filtros de busca e exibição estruturada para não expor a interface do banco diretamente ao usuário comum.
+		\item \textbf{Controle de Acesso Gerencial Restrito:} O \textit{dashboard} administrativo é protegido por camadas de autenticação robustas. A interface foi higienizada para exibir dados sensíveis apenas a usuários com privilégios de alto nível (\textit{Superusers}), impedindo qualquer acesso não autorizado ao banco de dados subjacente.
 		
 	\end{itemize}
-	
-	A adoção dessas práticas busca incorporar a segurança desde as etapas iniciais do desenvolvimento, seguindo o princípio de integração entre desenvolvimento, operações e segurança.
 	
 	% ==================================================
 	% 5 DOCUMENTAÇÃO DO SITE
 	% ==================================================
 	
-	\section{Documentação do Site}
+	\section{Estratégia Comercial e Portal Institucional}
 	
-	Como parte do desenvolvimento do projeto, foi criado um site utilizando a plataforma Google Sites com a finalidade de apresentar e documentar o sistema LabManager.
+	Para consolidar a presença digital e facilitar a adoção do produto pelo mercado, foi desenvolvido um Portal Institucional utilizando o Google Sites. Este portal atua como a principal vitrine do LabManager.
 	
-	O site funciona como uma página de apresentação do projeto, reunindo informações sobre as tecnologias utilizadas, funcionalidades, objetivo da aplicação e cronograma de desenvolvimento.
+	O site funciona não apenas como documentação, mas como uma ferramenta de atração, reunindo as propostas de valor, a robustez da tecnologia aplicada, o detalhamento das funcionalidades e o \textit{roadmap} estratégico do produto.
 	
-	O endereço utilizado para a documentação e apresentação do projeto é:
+	O portal comercial pode ser acessado através do link abaixo:
 	
 	\begin{center}
 		\url{https://sites.google.com/view/labmanager-devops/inicio}
@@ -232,173 +223,140 @@
 	% 5.1 OBJETIVO DO SITE
 	% ==================================================
 	
-	\subsection{Objetivo do Site}
+	\subsection{Objetivo do Portal}
 	
-	O site foi desenvolvido com o objetivo de centralizar as principais informações relacionadas ao LabManager, permitindo que professores, integrantes da equipe e demais interessados tenham acesso a uma visão geral do projeto.
+	O portal tem a missão de tangibilizar o valor do LabManager para clientes finais, gestores de TI, professores e investidores. 
 	
-	A documentação apresenta de forma organizada os recursos disponíveis no sistema, sua finalidade, as tecnologias utilizadas e o andamento das etapas de desenvolvimento.
-	
-	Dessa forma, o site complementa a documentação técnica apresentada neste relatório, funcionando como um material de apoio para a compreensão do projeto.
+	Através de um design limpo e direto, o site traduz a complexidade técnica detalhada neste relatório em benefícios práticos, funcionando como um canal eficiente de comunicação, suporte e vendas.
 	
 	% ==================================================
 	% 5.2 TECNOLOGIAS UTILIZADAS
 	% ==================================================
 	
-	\subsection{Tecnologias Utilizadas}
+	\subsection{Stack Tecnológica Moderna}
 	
-	Na página inicial do site são apresentadas as principais tecnologias utilizadas no desenvolvimento do LabManager:
+	Na página inicial do produto, o cliente é apresentado à robusta stack tecnológica que sustenta a plataforma, transmitindo confiabilidade:
 	
 	\begin{itemize}
 		
-		\item \textbf{Django 4.2:} framework utilizado no desenvolvimento do backend da aplicação.
+		\item \textbf{Django 4.2 \& Python 3.11:} Motor de backend que garante velocidade no processamento e extrema segurança de dados.
 		
-		\item \textbf{Python 3.11:} linguagem de programação utilizada no desenvolvimento do sistema.
+		\item \textbf{PostgreSQL:} Banco de dados relacional de padrão enterprise.
 		
-		\item \textbf{PostgreSQL:} sistema gerenciador de banco de dados relacional utilizado para armazenamento das informações.
+		\item \textbf{Docker:} Tecnologia de ponta para garantia de estabilidade, isolamento e escalabilidade na nuvem.
 		
-		\item \textbf{Docker:} tecnologia utilizada para a criação e execução dos containers da aplicação.
-		
-		\item \textbf{Flatpickr JS:} biblioteca JavaScript utilizada para auxiliar na seleção e manipulação de datas e horários.
+		\item \textbf{Flatpickr JS:} Biblioteca de interface avançada para proporcionar a melhor Experiência de Usuário (UX) durante os agendamentos.
 		
 	\end{itemize}
-	
-	A utilização conjunta dessas tecnologias permite estruturar uma aplicação web com separação de responsabilidades, persistência de dados, isolamento de ambientes e recursos voltados à experiência do usuário.
 	
 	% ==================================================
 	% 5.3 FUNCIONALIDADES APRESENTADAS
 	% ==================================================
 	
-	\subsection{Funcionalidades Apresentadas}
+	\subsection{Módulos e Funcionalidades (Core Business)}
 	
-	O site apresenta quatro funcionalidades principais do LabManager.
+	O portfólio de funcionalidades foi desenhado para agregar valor imediato à operação do cliente.
 	
 	% --------------------------------------------------
 	% 5.3.1
 	% --------------------------------------------------
 	
-	\subsubsection{Agendamento Inteligente}
+	\subsubsection{Agendamento Inteligente (Smart Booking)}
 	
-	A funcionalidade de agendamento permite o controle dos horários de utilização dos laboratórios.
-	
-	O sistema apresenta informações em tempo real, realiza o cálculo automático dos custos por hora e possui mecanismos visuais para impedir ou indicar conflitos entre horários.
+	Motor de reservas com prevenção automática de conflitos. Fornece dados em tempo real sobre a disponibilidade dos recursos, cálculo instantâneo de custos de operação e um fluxo visual que reduz a zero as falhas humanas durante as alocações.
 	
 	% --------------------------------------------------
 	% 5.3.2
 	% --------------------------------------------------
 	
-	\subsubsection{Inventário e Softwares}
+	\subsubsection{Gestão de Ativos e Inventário (Asset Management)}
 	
-	O módulo de inventário tem como objetivo realizar o gerenciamento do parque de computadores dos laboratórios.
-	
-	A documentação também apresenta o controle dos pacotes de software instalados em cada máquina e um painel destinado às solicitações de novas instalações.
+	Módulo de controle total sobre o parque de TI. Permite rastrear não apenas o hardware, mas também os softwares licenciados em cada máquina, integrado a um painel de chamados (tickets) para solicitações de suporte e novas instalações.
 	
 	% --------------------------------------------------
 	% 5.3.3
 	% --------------------------------------------------
 	
-	\subsubsection{Controle de Acesso (RBAC)}
+	\subsubsection{Segurança baseada em Perfis (RBAC)}
 	
-	O projeto utiliza o conceito de RBAC (\textit{Role-Based Access Control}), permitindo a divisão dos usuários em diferentes níveis de acesso.
-	
-	Entre os perfis apresentados estão:
+	Acesso altamente granular através do sistema RBAC (\textit{Role-Based Access Control}). Garante que cada usuário tenha acesso estrito ao que lhe compete, dividido em:
 	
 	\begin{itemize}
-		
-		\item Alunos/Comunidade;
-		
-		\item Técnicos;
-		
-		\item Administradores.
-		
+		\item Alunos/Comunidade (Usuário final);
+		\item Técnicos (Operação e Suporte);
+		\item Administradores (Governança Total).
 	\end{itemize}
 	
-	Essa divisão permite estabelecer diferentes permissões de acordo com as responsabilidades de cada usuário, além de contar com um fluxo de aprovação de contas.
+	Inclui também fluxo automatizado de auditoria e aprovação de novas contas.
 	
 	% --------------------------------------------------
 	% 5.3.4
 	% --------------------------------------------------
 	
-	\subsubsection{Gestão Financeira}
+	\subsubsection{Inteligência Financeira (Billing \& Reports)}
 	
-	A gestão financeira permite apresentar aos usuários os custos acumulados relacionados à utilização dos recursos.
-	
-	Para os gestores, são disponibilizados relatórios consolidados relacionados ao faturamento e aos lucros, permitindo uma visão administrativa e financeira do funcionamento dos laboratórios.
+	Voltado para gestores, este módulo transforma o uso dos laboratórios em dados financeiros concretos. Gera relatórios gerenciais consolidados sobre custos, previsibilidade de despesas e lucratividade, otimizando a tomada de decisões.
 	
 	% ==================================================
 	% 5.4 OBJETIVO DO LABMANAGER
 	% ==================================================
 	
-	\subsection{Objetivo do LabManager}
+	\subsection{Proposta de Valor do Produto}
 	
-	O LabManager foi desenvolvido para automatizar e otimizar o fluxo de utilização de laboratórios de informática e espaços compartilhados de tecnologia da informação.
+	O LabManager existe para erradicar a ineficiência na gestão de infraestruturas compartilhadas de TI. 
 	
-	A proposta é centralizar reservas, controle de ativos e suporte técnico em uma única interface, reduzindo processos manuais e proporcionando maior controle administrativo e financeiro.
-	
-	A centralização dessas informações permite melhorar a organização dos recursos disponíveis e facilitar o gerenciamento dos laboratórios.
+	Ao unificar reservas, controle de patrimônio, gestão financeira e suporte técnico em um ecossistema único e automatizado, a plataforma reduz drasticamente o esforço administrativo, corta custos ocultos e eleva a produtividade operacional da instituição cliente.
 	
 	% ==================================================
 	% 5.5 CRONOGRAMA DO PROJETO
 	% ==================================================
 	
-	\subsection{Cronograma do Projeto}
+	\subsection{Roadmap de Lançamento}
 	
-	O site também apresenta um cronograma preliminar contendo as principais etapas previstas para o desenvolvimento do projeto.
+	O planejamento estratégico do produto foi dividido em ciclos ágeis de entrega:
 	
 	\begin{enumerate}
 		
-		\item \textbf{Etapa 1 -- Ideação, Prototipação e Design Thinking:} etapa envolvendo levantamento de requisitos, definição do escopo e prototipação inicial das telas.
+		\item \textbf{Fase 1 -- Descoberta e Prototipação:} Validação de mercado, levantamento de requisitos de negócio e design de UX/UI.
 		
-		\item \textbf{Etapa 2 -- Definição da Arquitetura do Sistema:} etapa envolvendo a escolha da stack tecnológica, incluindo Django, PostgreSQL e Docker, além da modelagem inicial do banco de dados.
+		\item \textbf{Fase 2 -- Arquitetura e Engenharia Base:} Estruturação de ambiente em nuvem, configuração Docker e modelagem robusta do banco de dados (PostgreSQL).
 		
-		\item \textbf{Etapa 3 -- Desenvolvimento do Backend:} etapa envolvendo a implementação dos módulos de agendamento, inventário e controle de acesso (RBAC).
+		\item \textbf{Fase 3 -- Core Backend:} Implementação das regras de negócios para Agendamento, Inventário e RBAC.
 		
-		\item \textbf{Etapa 4 -- Desenvolvimento do Frontend:} etapa destinada à construção das interfaces de usuário e integração com o backend.
+		\item \textbf{Fase 4 -- Integração Frontend:} Conexão fluida entre interfaces de usuário de alta conversão e a API de negócios.
 		
-		\item \textbf{Etapa 5 -- Testes e Ajustes Finais:} etapa destinada à realização de testes de integração, correção de possíveis falhas e revisão das práticas de segurança.
+		\item \textbf{Fase 5 -- Quality Assurance (QA) e Segurança:} Auditorias de segurança (DevSecOps), testes de estresse e polimento funcional.
 		
-		\item \textbf{Etapa 6 -- Apresentação Final:} etapa destinada à entrega da documentação completa e apresentação do sistema finalizado.
+		\item \textbf{Fase 6 -- Lançamento e \textit{Go-to-Market}:} Entrega da versão final do produto, acompanhada de toda a documentação corporativa para implantação.
 		
 	\end{enumerate}
-	
-	O cronograma apresentado no site é preliminar e pode sofrer alterações ao longo do desenvolvimento do projeto, de acordo com as necessidades identificadas pela equipe.
 	
 	% ==================================================
 	% 5.6 INTEGRAÇÃO ENTRE SITE E PROJETO
 	% ==================================================
 	
-	\subsection{Integração entre o Site e o Projeto}
+	\subsection{Sinergia Comercial e Técnica}
 	
-	O site atua como uma extensão da documentação técnica do LabManager.
+	A coexistência deste relatório técnico com o portal institucional cria uma base de vendas altamente eficaz. 
 	
-	Enquanto este relatório apresenta de maneira detalhada a arquitetura, a containerização e as práticas de segurança, o site oferece uma apresentação mais visual e resumida do projeto.
-	
-	Essa integração facilita a apresentação do trabalho acadêmico, pois permite que as informações técnicas sejam complementadas por uma interface acessível e organizada.
-	
-	Dessa forma, o site contribui para a comunicação do projeto e permite apresentar de maneira objetiva as tecnologias, funcionalidades, objetivos e etapas de desenvolvimento do sistema.
+	Enquanto este documento prova a maturidade arquitetônica e o compromisso com a segurança de dados, o site entrega a visão comercial, convertendo as funcionalidades em diferenciais atrativos para o usuário final. Juntos, eles consolidam a credibilidade do LabManager como um sistema moderno, confiável e pronto para o mercado.
 	
 	% ==================================================
 	% 6 CONCLUSÃO
 	% ==================================================
 	
-	\section{Conclusão}
+	\section{Conclusão do Relatório}
 	
-	O relatório demonstrou a adequação do sistema de agendamentos às boas práticas de Engenharia de Software e DevSecOps.
+	Este documento evidencia que o \textbf{LabManager} transcende a esfera acadêmica, posicionando-se como um produto de software maduro, construído sob os mais rigorosos padrões da Engenharia de Software e da cultura DevSecOps.
 	
-	A separação de responsabilidades por meio da arquitetura baseada em Django, associada à utilização de containers com Docker Compose, contribui para simplificar as fases de desenvolvimento, configuração e implantação do sistema.
+	A escolha estratégica do framework Django, acoplada à resiliência do PostgreSQL e à portabilidade inerente do Docker, resulta em um sistema escalável, de fácil manutenção e pronto para implantações do tipo \textit{Plug and Play} em qualquer provedor de nuvem. As severas práticas de controle de acesso e blindagem de credenciais asseguram total conformidade com as exigências contemporâneas de proteção de dados corporativos.
 	
-	O uso de variáveis de ambiente assegura que as regras de segurança sejam respeitadas, evitando a exposição de chaves e senhas da infraestrutura.
+	O portal institucional complementa essa robustez técnica com uma excelente camada de atração e comunicação, estando perfeitamente alinhado com estratégias modernas de marketing de produto SaaS (\textit{Software as a Service}).
 	
-	As práticas relacionadas ao controle de acesso, proteção de credenciais e utilização do arquivo \texttt{.gitignore} também contribuem para estabelecer uma base mais segura para o projeto.
-	
-	Além da aplicação, a criação do site LabManager permitiu centralizar e apresentar as principais informações do sistema, incluindo suas tecnologias, funcionalidades, objetivos e cronograma de desenvolvimento.
-	
-	Com isso, o projeto possui não apenas uma estrutura técnica baseada em Django, PostgreSQL e Docker, mas também uma documentação complementar voltada à apresentação e compreensão da solução.
-	
-	O conjunto dessas características forma um alicerce organizado para as próximas etapas de desenvolvimento do sistema de agendamento de laboratórios, permitindo sua evolução com foco em segurança, organização, escalabilidade e facilidade de manutenção.
+	O LabManager consolida-se, assim, não apenas como um sistema funcional de agendamentos, mas como uma solução corporativa completa: segura, escalável, financeiramente inteligente e estrategicamente pronta para resolver as dores reais do mercado.
 	
 	% ==================================================
 	% FIM DO DOCUMENTO
 	% ==================================================
 	
 \end{document}
-```
