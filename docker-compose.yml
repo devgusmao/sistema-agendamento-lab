@@ -10,27 +10,34 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5433:5432" # Mapeia a porta 5433 da sua máquina para a 5432 do container
+      - "5433:5432" # Mapeia a porta 5433 da máquina para a 5432 do container
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   web:
     build: .
     container_name: agendamento_django
     restart: always
-    command: python manage.py runserver 0.0.0.0:8000
+    # Aplica as migrações antes de subir: sem isto, um deploy com migração nova
+    # subia a aplicação contra um esquema desatualizado.
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
     volumes:
       - .:/app
     ports:
       - "8001:8000"
+    env_file:
+      - .env
     environment:
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_HOST=${POSTGRES_HOST}
-      - POSTGRES_PORT=${POSTGRES_PORT}
-      - SECRET_KEY=${SECRET_KEY}
-      - DEBUG=${DEBUG}
+      # POSTGRES_HOST é o nome do serviço na rede do compose, independente do .env
+      - POSTGRES_HOST=db
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
 volumes:
   postgres_data:
