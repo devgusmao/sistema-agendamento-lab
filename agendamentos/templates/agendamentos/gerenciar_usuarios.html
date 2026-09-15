@@ -83,8 +83,6 @@
                                 {% if not u.is_superuser or user.is_superuser %}
                                     <a href="{% url 'resetar_senha_usuario' u.id %}" class="btn-edit btn-reset">Redefinir Senha</a>
                                 {% endif %}
-                                {# Excluir era um link GET protegido só por um confirm() no
-                                   navegador — sem nenhuma proteção no servidor. #}
                                 {% if u.id != user.id and not u.is_superuser or u.id != user.id and user.is_superuser %}
                                     <form method="post" action="{% url 'deletar_usuario' u.id %}" class="btn-inline-form"
                                           onsubmit="return confirm('Excluir permanentemente o usuário {{ u.username|escapejs }}? Esta ação não pode ser desfeita.')">

@@ -53,7 +53,6 @@
                         <td>{{ p.usuario.email|default:"Sem e-mail cadastrado" }}</td>
                         <td>{{ p.usuario.date_joined|date:"d/m/Y H:i" }}</td>
                         <td>
-                            {# Aprovar era um link GET, disparável por CSRF contra um admin logado. #}
                             <form method="post" action="{% url 'aprovar_usuario' p.id %}" class="btn-inline-form">
                                 {% csrf_token %}
                                 <button type="submit" class="btn-aprovar">Aprovar Acesso</button>
@@ -68,8 +67,6 @@
     {% endif %}
 </div>
 
-{# A view sempre enviou `aprovados` ao template, mas a seção não existia —
-   não havia como revogar um acesso já concedido. #}
 <h2 class="section-title">Acessos ativos ({{ aprovados|length }})</h2>
 <div class="table-card">
     {% if aprovados %}

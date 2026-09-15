@@ -62,7 +62,6 @@
 
 {% block content %}
 <div class="page-header">
-    {# O mesmo template atende cadastro e edição; o título ficava sempre "Cadastrar". #}
     <h1>{% if laboratorio %}Editar Laboratório{% else %}Cadastrar Laboratório{% endif %}</h1>
     <p>
         {% if laboratorio %}
@@ -100,8 +99,6 @@
             {{ form.capacidade }}
         </div>
 
-        {# O campo existe no model e no form, mas não era renderizado: não havia
-           como preencher a descrição por nenhuma tela do sistema. #}
         <div class="form-group">
             <label>Descrição</label>
             {{ form.descricao }}

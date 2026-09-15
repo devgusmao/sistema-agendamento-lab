@@ -45,8 +45,6 @@
     <form method="post" novalidate>
         {% csrf_token %}
 
-        {# O template anterior não renderizava erro nenhum: em caso de validação
-           falha a página recarregava sem explicar o motivo. #}
         {% if form.errors %}
             <ul class="errorlist">
                 {% for error in form.non_field_errors %}

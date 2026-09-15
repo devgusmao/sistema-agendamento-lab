@@ -54,7 +54,6 @@
     <a href="{% url 'criar_solicitacao_global' %}" class="btn-primary">+ Nova Solicitação</a>
 </div>
 
-{# Os cartões viraram filtros clicáveis por status. #}
 <div class="stats-grid">
     <a href="{% url 'listar_solicitacoes' %}" class="stat-card {% if not status_filtro %}is-active{% endif %}">
         <span class="stat-label">Total</span>
@@ -111,8 +110,6 @@
                         <td>
                             <div class="acoes">
                                 {% if is_gestor %}
-                                    {# Cada transição é um POST com CSRF; antes eram links GET
-                                       com o status embutido na própria URL. #}
                                     {% if sol.status == 'PENDENTE' %}
                                         <form method="post" action="{% url 'atualizar_status_solicitacao' sol.id %}" class="btn-inline-form">
                                             {% csrf_token %}
