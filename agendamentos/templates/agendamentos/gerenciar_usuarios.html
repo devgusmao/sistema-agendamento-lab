@@ -4,54 +4,32 @@
 
 {% block extra_css %}
 <style>
-    .page-header { margin-bottom: 2rem; }
-    .page-header h1 { margin: 0; font-size: 1.5rem; color: #0f172a; }
-    .page-header p { margin: 0.25rem 0 0; color: #64748b; font-size: 0.9rem; }
+    .filter-card { background: var(--card-bg); padding: 1rem 1.25rem; border-radius: 12px; border: 1px solid var(--panel-border); margin-bottom: 1.5rem; }
+    .filter-form { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
+    .filter-form input { flex: 1; min-width: 220px; padding: 0.55rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; }
+    .btn-filter { background-color: var(--primary-color); color: white; border: none; padding: 0.6rem 1.25rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .btn-filter:hover { background-color: var(--primary-hover); }
+    .btn-clear { background-color: #e2e8f0; color: #475569; padding: 0.6rem 1rem; border-radius: 6px; font-weight: 600; font-size: 0.9rem; }
 
-    .table-card {
-        background: white; 
-        border-radius: 10px; 
-        border: 1px solid #e2e8f0; 
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
-        overflow: hidden;
-    }
-
+    .table-card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--panel-border); overflow: hidden; }
     table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 1rem 1.25rem; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; }
+    th, td { padding: 0.9rem 1.1rem; text-align: left; border-bottom: 1px solid var(--panel-border); font-size: 0.88rem; }
     th { background-color: #f8fafc; font-weight: 600; color: #475569; }
 
-    .badge-status { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
-    .status-aprovado { background-color: #dcfce7; color: #166534; }
-    .status-pendente { background-color: #fef3c7; color: #92400e; }
+    .badge-status { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.74rem; font-weight: 700; }
+    .status-aprovado { background-color: var(--success-bg); color: var(--success-text); }
+    .status-pendente { background-color: var(--warning-bg); color: var(--warning-text); }
 
     .user-info-text { font-weight: 600; color: #0f172a; }
     .superuser-tag { font-size: 0.75rem; color: #2563eb; font-weight: bold; margin-left: 0.25rem; }
 
-    .btn-edit { 
-        background-color: var(--primary-color); 
-        color: white; 
-        padding: 0.4rem 0.8rem; 
-        border-radius: 6px; 
-        text-decoration: none; 
-        font-weight: 600; 
-        font-size: 0.8rem; 
-        transition: background 0.2s;
-        display: inline-block;
-    }
-    .btn-edit:hover { background-color: var(--primary-hover); }
-
-    .btn-delete { 
-        background-color: #ef4444; 
-        color: white; 
-        padding: 0.4rem 0.8rem; 
-        border-radius: 6px; 
-        text-decoration: none; 
-        font-weight: 600; 
-        font-size: 0.8rem; 
-        transition: background 0.2s;
-        display: inline-block;
-        margin-left: 0.25rem;
-    }
+    .acoes { display: flex; gap: 0.4rem; align-items: center; }
+    .btn-edit, .btn-delete { color: white; padding: 0.4rem 0.8rem; border-radius: 6px; border: none; font-weight: 600; font-size: 0.8rem; cursor: pointer; }
+    .btn-edit { background-color: var(--primary-color); }
+    .btn-edit:hover { background-color: var(--primary-hover); text-decoration: none; }
+    .btn-reset { background-color: #7c3aed; }
+    .btn-reset:hover { background-color: #6d28d9; text-decoration: none; }
+    .btn-delete { background-color: #ef4444; }
     .btn-delete:hover { background-color: #dc2626; }
 </style>
 {% endblock %}
@@ -60,6 +38,14 @@
 <div class="page-header">
     <h1>Gerenciamento Global de Usuários</h1>
     <p>Consulte, edite ou remova contas de usuários cadastradas no sistema.</p>
+</div>
+
+<div class="filter-card">
+    <form method="get" class="filter-form">
+        <input type="text" name="busca" placeholder="Buscar por usuário, nome ou e-mail..." value="{{ busca }}">
+        <button type="submit" class="btn-filter">Buscar</button>
+        {% if busca %}<a href="{% url 'gerenciar_usuarios' %}" class="btn-clear">Limpar</a>{% endif %}
+    </form>
 </div>
 
 <div class="table-card">
@@ -78,10 +64,9 @@
                 {% for u in usuarios %}
                     <tr>
                         <td>
-                            <span class="user-info-text">{{ u.username }}</span>
-                            {% if u.is_superuser %}
-                                <span class="superuser-tag">(Superuser)</span>
-                            {% endif %}
+                            <span class="user-info-text">{{ u.get_full_name|default:u.username }}</span>
+                            {% if u.is_superuser %}<span class="superuser-tag">(Superuser)</span>{% endif %}
+                            <span style="display:block; font-size:0.78rem; color:var(--muted-text);">@{{ u.username }}</span>
                         </td>
                         <td>{{ u.email|default:"-" }}</td>
                         <td>{{ u.perfil.get_tipo_display|default:"Aluno / Comunidade" }}</td>
@@ -93,17 +78,27 @@
                             {% endif %}
                         </td>
                         <td>
-                            <a href="{% url 'editar_usuario' u.id %}" class="btn-edit">Editar</a>
-                            {% if u != user %}
-                                <a href="{% url 'deletar_usuario' u.id %}" class="btn-delete" onclick="return confirm('Tem certeza que deseja excluir este usuário?')">Excluir</a>
-                            {% endif %}
+                            <div class="acoes">
+                                <a href="{% url 'editar_usuario' u.id %}" class="btn-edit">Editar</a>
+                                {% if not u.is_superuser or user.is_superuser %}
+                                    <a href="{% url 'resetar_senha_usuario' u.id %}" class="btn-edit btn-reset">Redefinir Senha</a>
+                                {% endif %}
+                                {% if u.id != user.id and not u.is_superuser or u.id != user.id and user.is_superuser %}
+                                    <form method="post" action="{% url 'deletar_usuario' u.id %}" class="btn-inline-form"
+                                          onsubmit="return confirm('Excluir permanentemente o usuário {{ u.username|escapejs }}? Esta ação não pode ser desfeita.')">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn-delete">Excluir</button>
+                                    </form>
+                                {% endif %}
+                            </div>
                         </td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
+        {% include 'agendamentos/_paginacao.html' with page_obj=usuarios %}
     {% else %}
-        <p style="padding: 2rem; margin: 0; color: #64748b;">Nenhum usuário cadastrado.</p>
+        <p class="empty-state">Nenhum usuário encontrado.</p>
     {% endif %}
 </div>
 {% endblock %}

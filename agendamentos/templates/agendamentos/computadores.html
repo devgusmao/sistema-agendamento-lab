@@ -4,34 +4,22 @@
 
 {% block extra_css %}
 <style>
-    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-    .page-header h1 { margin: 0; font-size: 1.5rem; color: #0f172a; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .btn-novo { background-color: var(--primary-color); color: white; padding: 0.7rem 1.2rem; border-radius: 8px; font-weight: 600; font-size: 0.9rem; }
+    .btn-novo:hover { background-color: var(--primary-hover); text-decoration: none; }
 
-    .btn-novo {
-        background-color: var(--primary-color);
-        color: white;
-        padding: 0.6rem 1.2rem;
-        border-radius: 6px;
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 0.9rem;
-    }
-    .btn-novo:hover { background-color: var(--primary-hover); }
-
-    .table-card {
-        background: white; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow: hidden;
-    }
+    .table-card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--panel-border); overflow: hidden; }
     table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 1rem 1.25rem; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; }
+    th, td { padding: 0.9rem 1.1rem; text-align: left; border-bottom: 1px solid var(--panel-border); font-size: 0.88rem; }
     th { background-color: #f8fafc; font-weight: 600; color: #475569; }
 
-    .badge { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
-    .bg-disponivel { background-color: #dcfce7; color: #166534; }
-    .bg-manutencao { background-color: #fef3c7; color: #92400e; }
-    .bg-inativo { background-color: #fee2e2; color: #991b1b; }
+    .badge { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.74rem; font-weight: 700; }
+    .bg-disponivel { background-color: var(--success-bg); color: var(--success-text); }
+    .bg-manutencao { background-color: var(--warning-bg); color: var(--warning-text); }
+    .bg-inativo { background-color: var(--danger-bg); color: var(--danger-text); }
 
-    .btn-editar { color: #2563eb; text-decoration: none; font-weight: 600; }
-    .btn-editar:hover { text-decoration: underline; }
+    .badge-soft { display: inline-block; background: #f1f5f9; color: #334155; border-radius: 999px; padding: 0.15rem 0.5rem; font-size: 0.72rem; margin: 0.1rem 0.1rem 0 0; }
+    .btn-editar { color: var(--primary-color); font-weight: 600; }
 </style>
 {% endblock %}
 
@@ -39,7 +27,7 @@
 <div class="page-header">
     <div>
         <h1>Gerenciar Máquinas</h1>
-        <p style="margin: 0.25rem 0 0; color: #64748b; font-size: 0.9rem;">Lista completa de equipamentos registrados nos laboratórios.</p>
+        <p>Lista completa de equipamentos registrados nos laboratórios.</p>
     </div>
     <a href="{% url 'cadastrar_computador' %}" class="btn-novo">+ Nova Máquina</a>
 </div>
@@ -52,6 +40,8 @@
                     <th>Identificador</th>
                     <th>Laboratório</th>
                     <th>Status</th>
+                    <th>Valor/Hora</th>
+                    <th>Softwares</th>
                     <th>Observações</th>
                     <th>Ações</th>
                 </tr>
@@ -66,16 +56,23 @@
                                 {{ pc.get_status_display }}
                             </span>
                         </td>
-                        <td>{{ pc.observacoes|default:"-"|truncatechars:30 }}</td>
+                        <td>R$ {{ pc.valor_hora|floatformat:2 }}</td>
                         <td>
-                            <a href="{% url 'editar_computador' pc.id %}" class="btn-editar">✏️ Editar</a>
+                            {% for s in pc.softwares.all %}
+                                <span class="badge-soft">{{ s.nome }}</span>
+                            {% empty %}
+                                <span style="color:#94a3b8;">—</span>
+                            {% endfor %}
                         </td>
+                        <td>{{ pc.observacoes|default:"-"|truncatechars:30 }}</td>
+                        <td><a href="{% url 'editar_computador' pc.id %}" class="btn-editar">✏️ Editar</a></td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
+        {% include 'agendamentos/_paginacao.html' with page_obj=computadores %}
     {% else %}
-        <p style="padding: 2rem; margin: 0; color: #64748b;">Nenhuma máquina cadastrada.</p>
+        <p class="empty-state">Nenhuma máquina cadastrada.</p>
     {% endif %}
 </div>
 {% endblock %}

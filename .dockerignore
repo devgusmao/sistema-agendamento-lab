@@ -1,0 +1,35 @@
+# Segredos: sem este arquivo, o `COPY . /app/` do Dockerfile embutia o .env
+# (com SECRET_KEY e senha do banco) dentro da imagem.
+.env
+.env.*
+!.env.example
+
+# Controle de versão e metadados
+.git
+.gitignore
+.github
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# Django
+db.sqlite3
+db.sqlite3-journal
+staticfiles/
+media/
+*.log
+
+# IDEs e SO
+.vscode/
+.idea/
+.DS_Store
+
+# Documentação e build local
+Documentação/
+*.tex
+*.pdf

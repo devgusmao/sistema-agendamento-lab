@@ -5,9 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Painel - Agendamento de Laboratórios{% endblock %}</title>
-    <!-- Estilos do Flatpickr -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
     <link rel="stylesheet" href="{% static 'agendamentos/css/styles.css' %}">
     <link rel="stylesheet" href="{% static 'agendamentos/css/base.css' %}">
     {% block extra_css %}{% endblock %}
@@ -16,55 +13,55 @@
 
     <!-- Sidebar Lateral Reutilizável -->
     <aside class="sidebar">
-        <div class="sidebar-brand">
-            🖥️ LabManager
-        </div>
+        <div class="sidebar-brand">LabManager</div>
 
-       <ul class="sidebar-menu">
-    <li class="menu-title">Geral</li>
-    <li>
-        <a href="{% url 'home' %}">🏠 Painel de Máquinas</a>
-    </li>
-    <li>
-        <a href="{% url 'meus_agendamentos' %}">📅 Meus Agendamentos</a>
-    </li>
-    <li>
-        <a href="{% url 'listar_solicitacoes' %}">📩 Minhas Solicitações</a>
-    </li>
-    <li>
-        <a href="{% url 'criar_solicitacao_global' %}">🛠️ Solicitar Software</a>
-    </li>
+        <ul class="sidebar-menu">
+            <li class="menu-title">Geral</li>
+            <li>
+                <a href="{% url 'home' %}" {% if request.resolver_match.url_name == 'home' %}class="active"{% endif %}>🏠 Painel de Máquinas</a>
+            </li>
+            <li>
+                <a href="{% url 'meus_agendamentos' %}" {% if request.resolver_match.url_name == 'meus_agendamentos' %}class="active"{% endif %}>📅 Meus Agendamentos</a>
+            </li>
+            <li>
+                <a href="{% url 'listar_solicitacoes' %}" {% if request.resolver_match.url_name == 'listar_solicitacoes' %}class="active"{% endif %}>
+                    {% if user.is_superuser or user.perfil.tipo == 'ADMIN' or user.perfil.tipo == 'TECNICO' %}📊 Solicitações de Software{% else %}📩 Minhas Solicitações{% endif %}
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'criar_solicitacao_global' %}" {% if request.resolver_match.url_name == 'criar_solicitacao_global' %}class="active"{% endif %}>🛠️ Solicitar Software</a>
+            </li>
+            <li>
+                <a href="{% url 'alterar_senha' %}" {% if request.resolver_match.url_name == 'alterar_senha' %}class="active"{% endif %}>🔒 Alterar Senha</a>
+            </li>
 
             {% if user.is_superuser or user.perfil.tipo == 'ADMIN' or user.perfil.tipo == 'TECNICO' %}
-                <li class="menu-title">Administração & TI</li>
+                <li class="menu-title">Administração &amp; TI</li>
                 <li>
-            <a href="{% url 'listar_solicitacoes' %}">📊 Dashboard de Solicitações</a>
-        </li>
-                <li>
-                    <a href="{% url 'listar_laboratorios' %}">🏢 Laboratórios</a>
+                    <a href="{% url 'listar_laboratorios' %}" {% if request.resolver_match.url_name == 'listar_laboratorios' %}class="active"{% endif %}>🏢 Laboratórios</a>
                 </li>
                 <li>
-                    <a href="{% url 'listar_computadores' %}">💻 Máquinas</a>
+                    <a href="{% url 'listar_computadores' %}" {% if request.resolver_match.url_name == 'listar_computadores' %}class="active"{% endif %}>💻 Máquinas</a>
                 </li>
                 <li>
-                    <a href="{% url 'listar_softwares' %}">⚙️ Inventário de Softwares</a>
+                    <a href="{% url 'listar_softwares' %}" {% if request.resolver_match.url_name == 'listar_softwares' %}class="active"{% endif %}>⚙️ Inventário de Softwares</a>
                 </li>
 
                 {% if user.is_superuser or user.perfil.tipo == 'ADMIN' %}
                     <li>
-                        <a href="{% url 'gerenciar_agendamentos' %}">📊 Todas as Reservas</a>
+                        <a href="{% url 'gerenciar_agendamentos' %}" {% if request.resolver_match.url_name == 'gerenciar_agendamentos' %}class="active"{% endif %}>📋 Todas as Reservas</a>
                     </li>
                     <li>
-                        <a href="{% url 'dashboard_financeiro' %}">💰 Dashboard Financeiro</a>
+                        <a href="{% url 'dashboard_financeiro' %}" {% if request.resolver_match.url_name == 'dashboard_financeiro' %}class="active"{% endif %}>💰 Dashboard Financeiro</a>
                     </li>
                     <li>
-                        <a href="{% url 'liberar_usuarios' %}">🔑 Aprovar Usuários</a>
+                        <a href="{% url 'liberar_usuarios' %}" {% if request.resolver_match.url_name == 'liberar_usuarios' %}class="active"{% endif %}>🔑 Aprovar Usuários</a>
                     </li>
                     <li>
-                        <a href="{% url 'gerenciar_usuarios' %}">👥 Gerenciar Usuários</a>
+                        <a href="{% url 'gerenciar_usuarios' %}" {% if request.resolver_match.url_name == 'gerenciar_usuarios' %}class="active"{% endif %}>👥 Gerenciar Usuários</a>
                     </li>
                     <li>
-                        <a href="{% url 'permissoes_acesso' %}">🛡️ Permissões de Acesso</a>
+                        <a href="{% url 'permissoes_acesso' %}" {% if request.resolver_match.url_name == 'permissoes_acesso' %}class="active"{% endif %}>🛡️ Permissões de Acesso</a>
                     </li>
                 {% endif %}
             {% endif %}
@@ -93,8 +90,8 @@
     <main class="main-content">
         {% if messages %}
             {% for message in messages %}
-                <div class="alert">
-                    {{ message }}
+                <div class="alert alert-{{ message.tags|default:'info' }}" role="alert">
+                    <span>{{ message }}</span>
                 </div>
             {% endfor %}
         {% endif %}

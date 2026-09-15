@@ -19,3 +19,4 @@ staticfiles/
 # Docker / IDEs
 .vscode/
 .idea/
+.claude/

@@ -1,39 +1,73 @@
 {% extends 'agendamentos/base.html' %}
-{% load static %}
 
 {% block title %}Solicitar Instalação de Software{% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'agendamentos/css/auth.css' %}">
+<style>
+    .form-card {
+        max-width: 720px;
+        background: var(--card-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 14px;
+        padding: 1.75rem;
+        box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);
+    }
+    .field { margin-bottom: 1.15rem; }
+    .field label { display: block; font-weight: 600; font-size: 0.88rem; color: #334155; margin-bottom: 0.4rem; }
+    .form-control { width: 100%; padding: 0.6rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; }
+    .form-help { display: block; font-size: 0.78rem; color: var(--muted-text); margin-top: 0.3rem; }
+
+    .errorlist { list-style: none; margin: 0 0 1.25rem; padding: 0.85rem 1rem; background: var(--danger-bg); color: var(--danger-text); border: 1px solid #fecaca; border-radius: 10px; font-size: 0.88rem; }
+    .errorlist li + li { margin-top: 0.35rem; }
+
+    .destino-box { background: var(--info-bg); color: var(--info-text); padding: 0.75rem 0.9rem; border-radius: 10px; font-size: 0.88rem; margin-bottom: 1.25rem; }
+
+    .btn-enviar { padding: 0.8rem 1.5rem; background: var(--primary-color); color: #fff; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
+    .btn-enviar:hover { background: var(--primary-hover); }
+    .btn-voltar { margin-left: 0.75rem; color: var(--muted-text); }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="auth-shell" style="width: min(100%, 720px); margin: 0 auto;">
-    <div class="auth-card">
-        <div class="auth-header">
-            <p class="eyebrow">TI / Software</p>
-            <h1>Solicitar Instalação</h1>
+<div class="page-header">
+    <h1>Solicitar Instalação de Software</h1>
+    <p>A equipe técnica avalia o pedido e atualiza o status na tela de solicitações.</p>
+</div>
+
+<div class="form-card">
+    {% if computador %}
+        <div class="destino-box">
+            Solicitação para a máquina <strong>{{ computador.identificador }}</strong>
+            ({{ computador.laboratorio.nome }}).
         </div>
+    {% endif %}
 
-        <p style="color:#64748b; font-size:0.95rem; margin-bottom: 1.5rem;">
-            Solicite um software para uso geral no laboratório. A equipe técnica irá avaliar e responder sua demanda.
-        </p>
+    <form method="post" novalidate>
+        {% csrf_token %}
 
-        <form method="post" class="form-stack">
-            {% csrf_token %}
+        {% if form.errors %}
+            <ul class="errorlist">
+                {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        <li>{{ field.label }}: {{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        {% endif %}
 
+        {% for field in form %}
             <div class="field">
-                <label for="id_software_nome">Programa e Versão Desejada</label>
-                {{ form.software_nome }}
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}<span class="form-help">{{ field.help_text }}</span>{% endif %}
             </div>
+        {% endfor %}
 
-            <div class="field">
-                <label for="id_justificativa">Justificativa / Finalidade do Uso</label>
-                {{ form.justificativa }}
-            </div>
-
-            <button type="submit" class="auth-button">Enviar Solicitação</button>
-        </form>
-    </div>
+        <button type="submit" class="btn-enviar">Enviar Solicitação</button>
+        <a href="{% url 'listar_solicitacoes' %}" class="btn-voltar">Cancelar</a>
+    </form>
 </div>
 {% endblock %}
