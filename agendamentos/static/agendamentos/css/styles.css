@@ -2,10 +2,18 @@
     --sidebar-width: 260px;
     --primary-color: #2563eb;
     --primary-color-dark: #1d4ed8;
+    /* Vários templates referenciam --primary-hover / --card-bg; sem estas
+       definições os estados :hover e os fundos de card ficavam sem valor. */
+    --primary-hover: #1d4ed8;
     --primary-soft: #dbeafe;
     --bg-color: #f4f7fb;
     --panel-color: #ffffff;
+    --card-bg: #ffffff;
     --panel-border: #e2e8f0;
+    --warning-bg: #fef3c7;
+    --warning-text: #92400e;
+    --info-bg: #e0f2fe;
+    --info-text: #0369a1;
     --sidebar-bg: #0f172a;
     --sidebar-hover: #1e293b;
     --text-color: #1e293b;

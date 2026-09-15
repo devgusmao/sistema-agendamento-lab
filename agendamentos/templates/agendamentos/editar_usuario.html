@@ -142,4 +142,18 @@
         </div>
     </form>
 </div>
+
+{# Ponto de entrada para o caso de "esqueci a senha de um usuário e não
+   consigo mudar": o admin redefine sem precisar da senha atual da pessoa. #}
+{% if usuario_obj.id != user.id or user.is_superuser %}
+<div class="form-card" style="margin-top: 1.5rem;">
+    <h3 style="margin: 0 0 0.4rem; font-size: 1rem; color: #0f172a;">🔒 Acesso</h3>
+    <p style="margin: 0 0 1rem; color: var(--muted-text); font-size: 0.88rem;">
+        Se {{ usuario_obj.username }} esqueceu a senha ou perdeu o acesso à conta, redefina aqui.
+    </p>
+    <a href="{% url 'resetar_senha_usuario' usuario_obj.id %}" class="btn-submit" style="display: inline-block; text-decoration: none;">
+        Redefinir Senha
+    </a>
+</div>
+{% endif %}
 {% endblock %}

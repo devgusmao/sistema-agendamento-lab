@@ -4,32 +4,47 @@
 
 {% block extra_css %}
 <style>
-    .page-header { margin-bottom: 2rem; }
-    .page-header h1 { margin: 0; font-size: 1.5rem; color: #0f172a; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .stat-card { background: var(--card-bg); border: 1px solid var(--panel-border); border-radius: 14px; padding: 1rem 1.15rem; }
+    .stat-label { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted-text); margin-bottom: 0.35rem; }
+    .stat-value { display: block; font-size: 1.6rem; font-weight: 800; color: #0f172a; }
 
-    .table-card {
-        background: white; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow: hidden;
-    }
+    .section-title { margin: 2rem 0 0.85rem; font-size: 1.05rem; color: #0f172a; }
+    .section-title:first-of-type { margin-top: 0; }
+
+    .table-card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--panel-border); overflow: hidden; }
     table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 1rem 1.25rem; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; }
+    th, td { padding: 0.9rem 1.1rem; text-align: left; border-bottom: 1px solid var(--panel-border); font-size: 0.88rem; }
     th { background-color: #f8fafc; font-weight: 600; color: #475569; }
 
-    .badge-status { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
-    .status-confirmado { background-color: #dcfce7; color: #166534; }
-    .status-cancelado { background-color: #fee2e2; color: #991b1b; }
-
-    .btn-cancelar { color: #ef4444; text-decoration: none; font-weight: 600; font-size: 0.85rem; }
-    .btn-cancelar:hover { text-decoration: underline; }
+    .badge-status { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.74rem; font-weight: 700; }
+    .status-confirmado { background-color: var(--success-bg); color: var(--success-text); }
+    .status-cancelado { background-color: var(--danger-bg); color: var(--danger-text); }
+    .status-andamento { background-color: var(--info-bg); color: var(--info-text); }
+    .status-encerrado { background-color: #f1f5f9; color: #475569; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="page-header">
     <h1>Meus Agendamentos</h1>
+    <p>Acompanhe suas reservas e cancele as que não for mais utilizar.</p>
 </div>
 
+<div class="stats-grid">
+    <div class="stat-card">
+        <span class="stat-label">Reservas ativas</span>
+        <span class="stat-value">{{ proximos|length }}</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Total acumulado</span>
+        <span class="stat-value">R$ {{ total_gasto|floatformat:2 }}</span>
+    </div>
+</div>
+
+<h2 class="section-title">Próximas reservas</h2>
 <div class="table-card">
-    {% if agendamentos %}
+    {% if proximos %}
         <table>
             <thead>
                 <tr>
@@ -37,35 +52,84 @@
                     <th>Laboratório</th>
                     <th>Início</th>
                     <th>Término</th>
-                    <th>Status</th>
+                    <th>Finalidade</th>
+                    <th>Valor</th>
+                    <th>Situação</th>
                     <th>Ações</th>
                 </tr>
             </thead>
             <tbody>
-                {% for a in agendamentos %}
+                {% for a in proximos %}
                     <tr>
                         <td><strong>{{ a.computador.identificador }}</strong></td>
                         <td>{{ a.computador.laboratorio.nome|default:"-" }}</td>
                         <td>{{ a.data_hora_inicio|date:"d/m/Y H:i" }}</td>
                         <td>{{ a.data_hora_fim|date:"d/m/Y H:i" }}</td>
+                        <td>{{ a.get_finalidade_display }}</td>
+                        <td>R$ {{ a.valor_total|floatformat:2 }}</td>
                         <td>
-                            <span class="badge-status {% if a.status == 'CONFIRMADO' %}status-confirmado{% else %}status-cancelado{% endif %}">
-                                {{ a.get_status_display }}
-                            </span>
+                            {% if a.em_andamento %}
+                                <span class="badge-status status-andamento">Em uso agora</span>
+                            {% else %}
+                                <span class="badge-status status-confirmado">Confirmado</span>
+                            {% endif %}
                         </td>
                         <td>
-                            {% if a.status == 'CONFIRMADO' %}
-                                <a href="{% url 'cancelar_agendamento' a.id %}" class="btn-cancelar" onclick="return confirm('Tem certeza que deseja cancelar esta reserva?')">Cancelar</a>
-                            {% else %}
-                                -
-                            {% endif %}
+                            {# Cancelar era um link GET — qualquer página externa conseguia
+                               disparar o cancelamento. Agora é um POST com token CSRF. #}
+                            <form method="post" action="{% url 'cancelar_agendamento' a.id %}" class="btn-inline-form"
+                                  onsubmit="return confirm('Cancelar a reserva de {{ a.computador.identificador|escapejs }} em {{ a.data_hora_inicio|date:'d/m/Y H:i' }}?')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-as-link">Cancelar</button>
+                            </form>
                         </td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
     {% else %}
-        <p style="padding: 2rem; margin: 0; color: #64748b;">Você ainda não possui nenhum agendamento realizado.</p>
+        <p class="empty-state">
+            Você não tem reservas ativas. <a href="{% url 'home' %}">Reservar uma máquina</a>.
+        </p>
+    {% endif %}
+</div>
+
+<h2 class="section-title">Histórico</h2>
+<div class="table-card">
+    {% if historico %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Computador</th>
+                    <th>Início</th>
+                    <th>Término</th>
+                    <th>Finalidade</th>
+                    <th>Valor</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in historico %}
+                    <tr>
+                        <td><strong>{{ a.computador.identificador }}</strong></td>
+                        <td>{{ a.data_hora_inicio|date:"d/m/Y H:i" }}</td>
+                        <td>{{ a.data_hora_fim|date:"d/m/Y H:i" }}</td>
+                        <td>{{ a.get_finalidade_display }}</td>
+                        <td>R$ {{ a.valor_total|floatformat:2 }}</td>
+                        <td>
+                            {% if a.status == 'CANCELADO' %}
+                                <span class="badge-status status-cancelado">Cancelado</span>
+                            {% else %}
+                                <span class="badge-status status-encerrado">Concluído</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% include 'agendamentos/_paginacao.html' with page_obj=historico %}
+    {% else %}
+        <p class="empty-state">Nenhum agendamento anterior.</p>
     {% endif %}
 </div>
 {% endblock %}

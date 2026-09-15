@@ -5,6 +5,28 @@
 
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'agendamentos/css/home.css' %}">
+    <style>
+        .filter-bar { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; margin-bottom: 1.5rem; }
+        .filter-bar > div { flex: 1 1 180px; }
+        .filter-bar .form-control { width: 100%; padding: 0.55rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; }
+        .btn-filtrar { padding: 0.55rem 1.1rem; border: none; border-radius: 8px; background: var(--primary-color); color: #fff; font-weight: 600; cursor: pointer; }
+        .btn-filtrar:hover { background: var(--primary-hover); }
+        .btn-limpar { padding: 0.55rem 0.9rem; border-radius: 8px; background: #e2e8f0; color: #475569; font-weight: 600; }
+
+        .pc-status { display: inline-block; padding: 0.2rem 0.55rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
+        .st-disponivel { background: var(--success-bg); color: var(--success-text); }
+        .st-manutencao { background: var(--warning-bg); color: var(--warning-text); }
+        .st-inativo { background: var(--danger-bg); color: var(--danger-text); }
+
+        .pc-reservas { font-size: 0.75rem; color: var(--muted-text); margin: 0.5rem 0 0; }
+        .pc-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .btn-card { flex: 1; text-align: center; padding: 0.55rem 0.75rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; }
+        .btn-primary { background: var(--primary-color); color: #fff; }
+        .btn-primary:hover { background: var(--primary-hover); text-decoration: none; }
+        .btn-secondary { background: #f1f5f9; color: #334155; }
+        .btn-secondary:hover { background: #e2e8f0; text-decoration: none; }
+        .btn-disabled { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; text-align: center; padding: 0.55rem 0.75rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600; flex: 1; }
+    </style>
 {% endblock %}
 
 {% block content %}
@@ -14,25 +36,38 @@
 </div>
 
 <form method="get" class="filter-bar">
-    <div style="flex: 1;">
-        <input type="text" name="busca" class="form-control" placeholder="Buscar por máquina..." value="{{ busca }}">
+    <div>
+        <input type="text" name="busca" class="form-control" placeholder="Buscar por máquina ou laboratório..." value="{{ busca }}">
     </div>
-    <div style="flex: 1;">
-        <select name="laboratorio" class="form-control" onchange="this.form.submit()">
+    <div>
+        <select name="laboratorio" class="form-control">
             <option value="">Todos os Laboratórios</option>
             {% for l in laboratorios %}
                 <option value="{{ l.id }}" {% if l.id|stringformat:"s" == lab_id %}selected{% endif %}>{{ l.nome }}</option>
             {% endfor %}
         </select>
     </div>
-    <div style="flex: 1;">
-        <select name="software" class="form-control" onchange="this.form.submit()">
-            <option value="">Filtrar por Software</option>
+    <div>
+        <select name="software" class="form-control">
+            <option value="">Qualquer software</option>
             {% for s in softwares %}
-                <option value="{{ s.id }}" {% if s.id|stringformat:"s" == software_id %}selected{% endif %}>{{ s.nome }}</option>
+                <option value="{{ s.id }}" {% if s.id|stringformat:"s" == software_id %}selected{% endif %}>{{ s }}</option>
             {% endfor %}
         </select>
     </div>
+    {# O filtro de status já era processado na view, mas não existia controle na tela. #}
+    <div>
+        <select name="status" class="form-control">
+            <option value="">Qualquer status</option>
+            {% for valor, rotulo in status_choices %}
+                <option value="{{ valor }}" {% if valor == status_filtro %}selected{% endif %}>{{ rotulo }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="btn-filtrar">Filtrar</button>
+    {% if busca or lab_id or software_id or status_filtro %}
+        <a href="{% url 'home' %}" class="btn-limpar">Limpar</a>
+    {% endif %}
 </form>
 
 <div class="pc-grid">
@@ -41,11 +76,16 @@
             <div>
                 <div class="pc-topline">
                     <h3 class="pc-title">{{ pc.identificador }}</h3>
-                    <span class="pc-price">R$ {{ pc.valor_hora }}/h</span>
+                    <span class="pc-price">R$ {{ pc.valor_hora|floatformat:2 }}/h</span>
                 </div>
-                <p class="pc-meta">{{ pc.laboratorio.nome }}</p>
+                <p class="pc-meta">
+                    {{ pc.laboratorio.nome }}
+                    <span class="pc-status {% if pc.status == 'DISPONIVEL' %}st-disponivel{% elif pc.status == 'MANUTENCAO' %}st-manutencao{% else %}st-inativo{% endif %}">
+                        {{ pc.get_status_display }}
+                    </span>
+                </p>
 
-                <div style="margin-bottom: 1rem;">
+                <div style="margin-bottom: 0.75rem;">
                     <strong style="font-size: 0.78rem; color: #475569;">Softwares Instalados:</strong>
                     <div style="margin-top: 0.3rem;">
                         {% for soft in pc.softwares.all %}
@@ -55,14 +95,32 @@
                         {% endfor %}
                     </div>
                 </div>
+
+                {# reservas_ativas vem do Prefetch da view — antes era calculado e descartado. #}
+                <p class="pc-reservas">
+                    {% if pc.reservas_ativas %}
+                        🕒 Próxima reserva: {{ pc.reservas_ativas.0.data_hora_inicio|date:"d/m H:i" }}
+                        ({{ pc.reservas_ativas|length }} agendada{{ pc.reservas_ativas|length|pluralize }})
+                    {% else %}
+                        ✅ Sem reservas futuras
+                    {% endif %}
+                </p>
             </div>
 
             <div class="pc-actions">
-                <a href="{% url 'criar_agendamento' pc.id %}" class="btn-card btn-primary">Reservar</a>
+                {% if pc.status == 'DISPONIVEL' %}
+                    <a href="{% url 'criar_agendamento' pc.id %}" class="btn-card btn-primary">Reservar</a>
+                {% else %}
+                    {# Antes o botão aparecia sempre e a view rejeitava depois do clique. #}
+                    <span class="btn-disabled" title="Máquina {{ pc.get_status_display|lower }}">Indisponível</span>
+                {% endif %}
+                <a href="{% url 'criar_solicitacao_instalacao' pc.id %}" class="btn-card btn-secondary">Pedir software</a>
             </div>
         </div>
     {% empty %}
         <p style="grid-column: 1 / -1; color: #64748b;">Nenhum computador encontrado com os filtros selecionados.</p>
     {% endfor %}
 </div>
+
+{% include 'agendamentos/_paginacao.html' with page_obj=computadores %}
 {% endblock %}

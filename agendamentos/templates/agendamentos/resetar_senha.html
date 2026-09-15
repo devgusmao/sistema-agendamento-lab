@@ -1,0 +1,78 @@
+{% extends 'agendamentos/base.html' %}
+
+{% block title %}Redefinir Senha - {{ usuario_obj.username }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: var(--card-bg);
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        border: 1px solid var(--panel-border);
+        max-width: 460px;
+    }
+
+    .form-group { margin-bottom: 1.25rem; }
+    .form-group label { display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.88rem; color: #334155; }
+    .form-control { width: 100%; padding: 0.6rem 0.8rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.95rem; }
+    .form-control:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+    .form-help { display: block; font-size: 0.78rem; color: var(--muted-text); margin-top: 0.3rem; }
+
+    .form-actions { display: flex; gap: 1rem; align-items: center; margin-top: 1.5rem; }
+    .btn-submit { background-color: var(--primary-color); color: white; border: none; padding: 0.65rem 1.25rem; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.92rem; }
+    .btn-submit:hover { background-color: var(--primary-hover); }
+    .btn-cancelar { color: var(--muted-text); font-weight: 600; font-size: 0.9rem; }
+    .btn-cancelar:hover { color: #334155; text-decoration: underline; }
+
+    .errorlist { list-style: none; margin: 0 0 1.25rem; padding: 0.85rem 1rem; background: var(--danger-bg); color: var(--danger-text); border: 1px solid #fecaca; border-radius: 10px; font-size: 0.85rem; }
+    .errorlist li + li { margin-top: 0.35rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Redefinir Senha: {{ usuario_obj.username }}</h1>
+    <p>Defina uma nova senha para este usuário. A senha atual dele não é necessária.</p>
+</div>
+
+<div class="alert alert-warning">
+    <span>
+        A senha atual de <strong>{{ usuario_obj.username }}</strong> será substituída imediatamente e qualquer
+        sessão ativa dessa pessoa será encerrada. Combine a nova senha por um canal seguro — ela não é
+        enviada automaticamente por e-mail.
+    </span>
+</div>
+
+<div class="form-card">
+    <form method="post" novalidate>
+        {% csrf_token %}
+
+        {% if form.errors %}
+            <ul class="errorlist">
+                {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        <li>{{ field.label }}: {{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        {% for field in form %}
+            <div class="form-group">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}<span class="form-help">{{ field.help_text|safe }}</span>{% endif %}
+            </div>
+        {% endfor %}
+
+        <div class="form-actions">
+            <button type="submit" class="btn-submit">Redefinir Senha</button>
+            <a href="{% url 'editar_usuario' usuario_obj.id %}" class="btn-cancelar">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
