@@ -11,9 +11,7 @@ O projeto busca resolver problemas comuns de filas presenciais, choque de horár
 | Foto / Usuário | Nome Completo | Papel no Projeto | GitHub |
 | :---: | :--- | :--- | :---: |
 | <img src="https://github.com/devgusmao.png" width="50px" style="border-radius:50%"> | Diego de Gusmão Gaseo | Lead Developer / DevOps & Arquitetura | [@devgusmao](https://github.com/devgusmao) |
-
 | <img src="https://github.com/Erickzin00.png" width="50px" style="border-radius:50%"> | Erick Ayrton | Desenvolvedor Front-end | [@Erickzin00](https://github.com/Erickzin00) |
----
 
 ## 📌 O que foi feito até o momento
 
