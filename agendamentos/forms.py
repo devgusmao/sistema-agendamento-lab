@@ -1,8 +1,17 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import PasswordChangeForm, SetPasswordForm, UserCreationForm
 from django.contrib.auth.models import User
 from django.utils import timezone
+
 from .models import Computador, Perfil, Agendamento, Laboratorio, Software, SolicitacaoInstalacao
+
+
+def _com_classe_form_control(fields):
+    for field in fields.values():
+        field.widget.attrs.update({'class': 'form-control'})
+
+DURACAO_MAXIMA = timezone.timedelta(hours=2)
+ANTECEDENCIA_MAXIMA = timezone.timedelta(days=30)
 
 
 class CustomUserCreationForm(UserCreationForm):
@@ -17,8 +26,8 @@ class CustomUserCreationForm(UserCreationForm):
         fields = UserCreationForm.Meta.fields + ('email',)
 
     def clean_email(self):
-        email = self.cleaned_data.get('email')
-        if User.objects.filter(email=email).exists():
+        email = self.cleaned_data.get('email', '').strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
             raise forms.ValidationError('Este e-mail já está cadastrado no sistema.')
         return email
 
@@ -34,7 +43,7 @@ class LaboratorioForm(forms.ModelForm):
         }
         widgets = {
             'nome': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Laboratório de Informática 01'}),
-            'capacidade': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 30'}),
+            'capacidade': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'placeholder': 'Ex: 30'}),
             'descricao': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Descrição opcional'}),
         }
 
@@ -77,9 +86,15 @@ class ComputadorForm(forms.ModelForm):
             'identificador': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: PC-01'}),
             'laboratorio': forms.Select(attrs={'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
-            'valor_hora': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.50', 'value': '0.00', 'placeholder': '0.00'}),
+            'valor_hora': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.50', 'min': '0', 'placeholder': '0.00'}),
             'observacoes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
+
+    def clean_valor_hora(self):
+        valor = self.cleaned_data.get('valor_hora')
+        if valor is not None and valor < 0:
+            raise forms.ValidationError('O valor por hora não pode ser negativo.')
+        return valor
 
 
 class EditarUsuarioForm(forms.ModelForm):
@@ -110,6 +125,12 @@ class EditarUsuarioForm(forms.ModelForm):
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
         }
 
+    def clean_email(self):
+        email = self.cleaned_data.get('email', '').strip().lower()
+        if email and User.objects.filter(email__iexact=email).exclude(pk=self.instance.pk).exists():
+            raise forms.ValidationError('Este e-mail já pertence a outro usuário.')
+        return email
+
 
 class AgendamentoForm(forms.ModelForm):
     class Meta:
@@ -122,8 +143,8 @@ class AgendamentoForm(forms.ModelForm):
         }
         widgets = {
             'finalidade': forms.Select(attrs={'class': 'form-control'}),
-            'data_hora_inicio': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
-            'data_hora_fim': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            'data_hora_inicio': forms.DateTimeInput(attrs={'class': 'form-control', 'autocomplete': 'off'}),
+            'data_hora_fim': forms.DateTimeInput(attrs={'class': 'form-control', 'autocomplete': 'off'}),
         }
 
     def clean(self):
@@ -132,33 +153,82 @@ class AgendamentoForm(forms.ModelForm):
         fim = cleaned_data.get('data_hora_fim')
 
         if inicio and fim:
-            agora_com_tolerancia = timezone.now() - timezone.timedelta(minutes=5)
+            agora = timezone.now()
 
-            if inicio < agora_com_tolerancia:
+            # 5 min de tolerância para o tempo gasto preenchendo o formulário.
+            if inicio < agora - timezone.timedelta(minutes=5):
                 raise forms.ValidationError('A data de início do agendamento não pode ser no passado.')
+
+            if inicio > agora + ANTECEDENCIA_MAXIMA:
+                raise forms.ValidationError('Só é possível reservar com até 30 dias de antecedência.')
 
             if fim <= inicio:
                 raise forms.ValidationError('A data/hora de término deve ser posterior ao horário de início.')
 
-            duracao = fim - inicio
-            if duracao > timezone.timedelta(hours=2):
+            if fim - inicio > DURACAO_MAXIMA:
                 raise forms.ValidationError('O tempo máximo permitido por reserva é de 2 horas.')
 
         return cleaned_data
 
 
 class SolicitacaoInstalacaoForm(forms.ModelForm):
+    """Solicitação de instalação de software.
+
+    O campo `laboratorio` passou a fazer parte do formulário: o model já o
+    usava em `destino_display()`, mas ele nunca era preenchido porque ficava
+    fora de `fields` — toda solicitação era gravada como "Qualquer máquina".
+    """
+
     class Meta:
         model = SolicitacaoInstalacao
-        fields = ['software_nome', 'justificativa']
+        fields = ['laboratorio', 'software_nome', 'justificativa']
         labels = {
+            'laboratorio': 'Laboratório de Destino',
             'software_nome': 'Nome e Versão do Software Desejado',
             'justificativa': 'Justificativa / Finalidade de Uso',
         }
-        widgets = {
-            'software_nome': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Docker Desktop, Oracle SQL Developer'}),
-            'justificativa': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Explique por que precisa deste programa para uso geral'}),
+        help_texts = {
+            'laboratorio': 'Deixe em branco para solicitar em qualquer laboratório.',
         }
+        widgets = {
+            'laboratorio': forms.Select(attrs={'class': 'form-control'}),
+            'software_nome': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Docker Desktop, Oracle SQL Developer'}),
+            'justificativa': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Explique por que precisa deste programa'}),
+        }
+
+    def __init__(self, *args, computador=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['laboratorio'].required = False
+        self.fields['laboratorio'].empty_label = 'Qualquer laboratório'
+
+        # Ao solicitar a partir de uma máquina específica, o laboratório é
+        # determinado por ela e não deve ser escolhido pelo usuário.
+        if computador is not None:
+            self.fields['laboratorio'].disabled = True
+            self.fields['laboratorio'].initial = computador.laboratorio_id
+
+    def clean_justificativa(self):
+        justificativa = self.cleaned_data.get('justificativa', '').strip()
+        if len(justificativa) < 10:
+            raise forms.ValidationError('Descreva a justificativa com pelo menos 10 caracteres.')
+        return justificativa
+
+
+class AlterarSenhaForm(PasswordChangeForm):
+    """Troca de senha pelo próprio usuário logado (pede a senha atual)."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        _com_classe_form_control(self.fields)
+
+
+class ResetarSenhaForm(SetPasswordForm):
+    """Redefinição de senha por um administrador.
+
+    Não pede a senha atual: é exatamente o caso de um usuário que a esqueceu
+    e não tem como informá-la.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _com_classe_form_control(self.fields)
