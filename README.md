@@ -16,6 +16,7 @@ O projeto busca resolver problemas comuns de filas presenciais, choque de horár
 | <img src="https://github.com/Erickzin00.png" width="50px" style="border-radius:50%"> | Erick Ayrton | Desenvolvedor Front-end | [@Erickzin00](https://github.com/Erickzin00) |
 | <img src="https://github.com/ferrnand.png" width="50px" style="border-radius:50%"> | Fernando Oliveira | QA, UX & Site Administrator | [@ferrnand](https://github.com/ferrnand) |
 | <img src="https://github.com/codeyCaz.png" width="50px" style="border-radius:50%"> | Cassio Vinicius | Desenvolvedor Back-End | [@codeyCaz](https://github.com/codeyCaz) |
+| <img src="https://github.com/MatheusSalvador1.png" width="50px" style="border-radius:50%"> | Matheus Salvador | DevOps & Arquitetura | [@MatheusSalvador1](https://github.com/MatheusSalvador1) |
 ---
 
 ## 🚀 Como executar
