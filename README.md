@@ -47,6 +47,14 @@ Para desenvolvimento, com código montado do host e recarga automática:
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
+### E-mail (opcional)
+
+Para enviar e-mails de confirmação e cancelamento de reservas via Gmail, preencha
+`EMAIL_HOST_USER` e `EMAIL_HOST_PASSWORD` no `.env` (use uma *senha de app* do
+Google, nunca a senha da conta). Sem essas variáveis, as mensagens são apenas
+impressas no log. As regras de agendamento (duração, blocos, limite de reservas
+e horário de funcionamento) também são ajustáveis pelo `.env`; veja o `.env.example`.
+
 ### Comandos úteis
 
 ```bash
@@ -220,6 +228,10 @@ sistema-agendamento-lab/
 ## 🧭 Próximos passos
 
 - [ ] Limite de tentativas de login (proteção contra força bruta).
-- [ ] Notificação por e-mail na aprovação de cadastro e na conclusão de solicitações.
+- [ ] Notificação por e-mail na aprovação de cadastro e na conclusão de solicitações (reservas já notificam).
+- [ ] Registro de pagamento, multa de cancelamento e estorno.
+- [ ] Check-in/check-out e controle de não comparecimento.
+- [ ] Relatórios de ocupação e comportamento de uso.
+- [ ] Integração contínua (CI) com testes e verificação de migrações.
 - [ ] Exportação do dashboard financeiro em CSV/PDF.
 - [ ] Trilha de auditoria completa das ações administrativas.
