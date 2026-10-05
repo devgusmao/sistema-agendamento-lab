@@ -25,7 +25,7 @@
             </li>
             <li>
                 <a href="{% url 'listar_solicitacoes' %}" {% if request.resolver_match.url_name == 'listar_solicitacoes' %}class="active"{% endif %}>
-                    {% if user.is_superuser or user.perfil.tipo == 'ADMIN' or user.perfil.tipo == 'TECNICO' %}📊 Solicitações de Software{% else %}📩 Minhas Solicitações{% endif %}
+                    {% if is_gestor %}📊 Solicitações de Software{% else %}📩 Minhas Solicitações{% endif %}
                 </a>
             </li>
             <li>
@@ -35,7 +35,7 @@
                 <a href="{% url 'alterar_senha' %}" {% if request.resolver_match.url_name == 'alterar_senha' %}class="active"{% endif %}>🔒 Alterar Senha</a>
             </li>
 
-            {% if user.is_superuser or user.perfil.tipo == 'ADMIN' or user.perfil.tipo == 'TECNICO' %}
+            {% if is_gestor %}
                 <li class="menu-title">Administração &amp; TI</li>
                 <li>
                     <a href="{% url 'listar_laboratorios' %}" {% if request.resolver_match.url_name == 'listar_laboratorios' %}class="active"{% endif %}>🏢 Laboratórios</a>
@@ -47,12 +47,15 @@
                     <a href="{% url 'listar_softwares' %}" {% if request.resolver_match.url_name == 'listar_softwares' %}class="active"{% endif %}>⚙️ Inventário de Softwares</a>
                 </li>
 
-                {% if user.is_superuser or user.perfil.tipo == 'ADMIN' %}
+                {% if is_admin %}
                     <li>
                         <a href="{% url 'gerenciar_agendamentos' %}" {% if request.resolver_match.url_name == 'gerenciar_agendamentos' %}class="active"{% endif %}>📋 Todas as Reservas</a>
                     </li>
                     <li>
                         <a href="{% url 'dashboard_financeiro' %}" {% if request.resolver_match.url_name == 'dashboard_financeiro' %}class="active"{% endif %}>💰 Dashboard Financeiro</a>
+                    </li>
+                    <li>
+                        <a href="{% url 'listar_tipos_agendamento' %}" {% if 'tipo' in request.resolver_match.url_name and 'agendamento' in request.resolver_match.url_name %}class="active"{% endif %}>🏷️ Tipos e Preços</a>
                     </li>
                     <li>
                         <a href="{% url 'liberar_usuarios' %}" {% if request.resolver_match.url_name == 'liberar_usuarios' %}class="active"{% endif %}>🔑 Aprovar Usuários</a>

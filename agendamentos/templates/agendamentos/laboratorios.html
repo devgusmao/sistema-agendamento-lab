@@ -58,7 +58,7 @@
                         <td>
                             <div class="acoes">
                                 <a href="{% url 'editar_laboratorio' lab.id %}" class="btn-editar">✏️ Editar</a>
-                                {% if user.is_superuser or user.perfil.tipo == 'ADMIN' %}
+                                {% if is_admin %}
                                     {% if lab.total_maquinas == 0 %}
                                         <form method="post" action="{% url 'excluir_laboratorio' lab.id %}" class="btn-inline-form"
                                               onsubmit="return confirm('Excluir o laboratório {{ lab.nome|escapejs }}?')">

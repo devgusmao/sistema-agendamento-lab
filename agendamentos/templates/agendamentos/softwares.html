@@ -71,7 +71,7 @@
                         <th>Versão</th>
                         <th>Categoria</th>
                         <th>Máquinas</th>
-                        {% if user.is_superuser or user.perfil.tipo == 'ADMIN' %}<th>Ações</th>{% endif %}
+                        {% if is_admin %}<th>Ações</th>{% endif %}
                     </tr>
                 </thead>
                 <tbody>
@@ -81,7 +81,7 @@
                             <td>{{ s.versao|default:"-" }}</td>
                             <td><span class="badge-cat">{{ s.get_categoria_display }}</span></td>
                             <td>{{ s.total_maquinas }}</td>
-                            {% if user.is_superuser or user.perfil.tipo == 'ADMIN' %}
+                            {% if is_admin %}
                                 <td>
                                     <form method="post" action="{% url 'excluir_software' s.id %}" class="btn-inline-form"
                                           onsubmit="return confirm('Remover {{ s.nome|escapejs }} do inventário? Ele será desvinculado de {{ s.total_maquinas }} máquina(s).')">

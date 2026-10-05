@@ -40,7 +40,6 @@
                     <th>Identificador</th>
                     <th>Laboratório</th>
                     <th>Status</th>
-                    <th>Valor/Hora</th>
                     <th>Softwares</th>
                     <th>Observações</th>
                     <th>Ações</th>
@@ -56,7 +55,6 @@
                                 {{ pc.get_status_display }}
                             </span>
                         </td>
-                        <td>R$ {{ pc.valor_hora|floatformat:2 }}</td>
                         <td>
                             {% for s in pc.softwares.all %}
                                 <span class="badge-soft">{{ s.nome }}</span>
@@ -65,7 +63,18 @@
                             {% endfor %}
                         </td>
                         <td>{{ pc.observacoes|default:"-"|truncatechars:30 }}</td>
-                        <td><a href="{% url 'editar_computador' pc.id %}" class="btn-editar">✏️ Editar</a></td>
+                        <td>
+                            <div class="acoes">
+                                <a href="{% url 'editar_computador' pc.id %}" class="btn-editar">✏️ Editar</a>
+                                {% if is_admin %}
+                                    <form method="post" action="{% url 'excluir_computador' pc.id %}" class="btn-inline-form"
+                                          onsubmit="return confirm('Excluir a máquina {{ pc.identificador|escapejs }}?')">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn-as-link">Excluir</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </td>
                     </tr>
                 {% endfor %}
             </tbody>

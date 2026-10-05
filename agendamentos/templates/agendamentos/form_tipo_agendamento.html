@@ -1,0 +1,53 @@
+{% extends 'agendamentos/base.html' %}
+
+{% block title %}{% if tipo %}Editar{% else %}Novo{% endif %} Tipo de Agendamento{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card { background: var(--card-bg); padding: 2rem; border-radius: 10px; border: 1px solid #e2e8f0; max-width: 560px; }
+    .form-group { margin-bottom: 1.1rem; }
+    .form-group label { display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.88rem; color: #334155; }
+    .form-group input:not([type=checkbox]), .form-group select { width: 100%; padding: 0.6rem 0.8rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.95rem; }
+    .ajuda { display: block; margin-top: 0.3rem; color: #64748b; font-size: 0.8rem; }
+    .form-actions { display: flex; gap: 1rem; align-items: center; margin-top: 1.5rem; }
+    .btn-submit { background-color: var(--primary-color); color: white; border: none; padding: 0.65rem 1.25rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .btn-cancelar { color: #64748b; font-weight: 600; font-size: 0.9rem; }
+    .errorlist { color: #ef4444; font-size: 0.85rem; padding-left: 1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{% if tipo %}Editar tipo "{{ tipo.nome }}"{% else %}Novo tipo de agendamento{% endif %}</h1>
+    <p>Defina como este tipo de uso é cobrado.</p>
+</div>
+
+<div class="form-card">
+    <form method="post">
+        {% csrf_token %}
+        {% if form.errors %}
+            <ul class="errorlist">
+                {% for field in form %}{% for error in field.errors %}<li>{{ field.label }}: {{ error }}</li>{% endfor %}{% endfor %}
+                {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+
+        {% for field in form %}
+            <div class="form-group">
+                {% if field.name == 'ativo' %}
+                    <label>{{ field }} {{ field.label }}</label>
+                {% else %}
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                {% endif %}
+                {% if field.help_text %}<span class="ajuda">{{ field.help_text }}</span>{% endif %}
+            </div>
+        {% endfor %}
+
+        <div class="form-actions">
+            <button type="submit" class="btn-submit">Salvar</button>
+            <a href="{% url 'listar_tipos_agendamento' %}" class="btn-cancelar">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

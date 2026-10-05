@@ -51,14 +51,13 @@
 {% block content %}
 <div class="page-header">
     <h1>Reservar Máquina</h1>
-    <p>Escolha o horário e a finalidade do uso. Conflitos com reservas existentes são bloqueados automaticamente.</p>
+    <p>Escolha o tipo de uso e o horário. Conflitos com reservas existentes são bloqueados automaticamente.</p>
 </div>
 
 <div class="agendar-grid">
     <div class="card-box">
         <div class="machine-head">
             <h2>{{ computador.identificador }}</h2>
-            <span class="price-tag">R$ {{ computador.valor_hora|floatformat:2 }} / hora</span>
         </div>
         <p style="margin: 0 0 1rem; color: var(--muted-text); font-size: 0.9rem;">
             {{ computador.laboratorio.nome }}
@@ -95,8 +94,8 @@
             {% endif %}
 
             <div class="form-group">
-                <label for="{{ form.finalidade.id_for_label }}">{{ form.finalidade.label }}</label>
-                {{ form.finalidade }}
+                <label for="{{ form.tipo.id_for_label }}">{{ form.tipo.label }}</label>
+                {{ form.tipo }}
             </div>
 
             <div class="form-group">
@@ -150,10 +149,15 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/pt.js"></script>
 
+{{ taxas_json|json_script:"taxas-data" }}
+{{ duracoes_json|json_script:"duracoes-data" }}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    const VALOR_HORA = parseFloat("{{ computador.valor_hora|stringformat:'s' }}") || 0;
-    const MAX_MS = 2 * 60 * 60 * 1000;
+    const TAXAS = JSON.parse(document.getElementById('taxas-data').textContent);
+    const DURACOES = JSON.parse(document.getElementById('duracoes-data').textContent);
+    const selTipo = document.getElementById('{{ form.tipo.id_for_label }}');
+    const taxaAtual = () => parseFloat(TAXAS[selTipo.value]) || 0;
+    const maxMs = () => (parseInt(DURACOES[selTipo.value], 10) || 120) * 60 * 1000;
 
     const el = document.getElementById('reservas-data');
     const reservas = el ? JSON.parse(el.textContent) : [];
@@ -169,7 +173,7 @@ document.addEventListener("DOMContentLoaded", function () {
         altInput: true,
         altFormat: "d/m/Y H:i",
         time_24hr: true,
-        minuteIncrement: 15,
+        minuteIncrement: 30,
         minDate: "today",
         maxDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     };
@@ -200,11 +204,11 @@ document.addEventListener("DOMContentLoaded", function () {
             if (!selectedDates.length) return;
             const inicio = selectedDates[0];
             pickerFim.set('minDate', inicio);
-            pickerFim.set('maxDate', new Date(inicio.getTime() + MAX_MS));
+            pickerFim.set('maxDate', new Date(inicio.getTime() + maxMs()));
 
             const fimAtual = pickerFim.selectedDates[0];
-            if (!fimAtual || fimAtual <= inicio || fimAtual - inicio > MAX_MS) {
-                pickerFim.setDate(new Date(inicio.getTime() + MAX_MS), true);
+            if (!fimAtual || fimAtual <= inicio || fimAtual - inicio > maxMs()) {
+                pickerFim.setDate(new Date(inicio.getTime() + maxMs()), true);
             }
             atualizarResumo();
         }
@@ -222,9 +226,15 @@ document.addEventListener("DOMContentLoaded", function () {
         document.getElementById('resumo-duracao').textContent =
             (h ? h + 'h' : '') + (m ? ' ' + m + 'min' : (h ? '' : '0min'));
         document.getElementById('resumo-valor').textContent =
-            'R$ ' + (horas * VALOR_HORA).toFixed(2).replace('.', ',');
+            'R$ ' + (horas * taxaAtual()).toFixed(2).replace('.', ',');
         box.hidden = false;
     }
+
+    selTipo.addEventListener('change', function () {
+        const ini = pickerInicio.selectedDates[0];
+        if (ini) pickerInicio.config.onChange[0]([ini]);
+        atualizarResumo();
+    });
 
     atualizarResumo();
 });
