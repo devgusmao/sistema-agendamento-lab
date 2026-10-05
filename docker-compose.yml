@@ -21,13 +21,8 @@ services:
     build: .
     container_name: agendamento_django
     restart: always
-    # Aplica as migrações antes de subir: sem isto, um deploy com migração nova
-    # subia a aplicação contra um esquema desatualizado.
-    command: >
-      sh -c "python manage.py migrate --noinput &&
-             python manage.py runserver 0.0.0.0:8000"
-    volumes:
-      - .:/app
+    # O entrypoint aplica as migrações, coleta os estáticos e sobe o gunicorn.
+    # Para desenvolvimento com recarga automática, use também o docker-compose.dev.yml.
     ports:
       - "8001:8000"
     env_file:
