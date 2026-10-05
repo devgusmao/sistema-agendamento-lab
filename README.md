@@ -38,7 +38,22 @@ docker compose exec web python manage.py createsuperuser
 A aplicação fica disponível em **http://localhost:8001** e o painel do Django em
 **http://localhost:8001/admin**.
 
-As migrações são aplicadas automaticamente na subida do container `web`.
+Na subida, o container `web` aplica as migrações, coleta os arquivos estáticos
+(servidos por WhiteNoise) e inicia o **gunicorn** como usuário sem privilégios.
+
+Para desenvolvimento, com código montado do host e recarga automática:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+```
+
+### E-mail (opcional)
+
+Para enviar e-mails de confirmação e cancelamento de reservas via Gmail, preencha
+`EMAIL_HOST_USER` e `EMAIL_HOST_PASSWORD` no `.env` (use uma *senha de app* do
+Google, nunca a senha da conta). Sem essas variáveis, as mensagens são apenas
+impressas no log. As regras de agendamento (duração, blocos, limite de reservas
+e horário de funcionamento) também são ajustáveis pelo `.env`; veja o `.env.example`.
 
 ### Comandos úteis
 
@@ -199,7 +214,9 @@ sistema-agendamento-lab/
 ├── .env.example                 # Modelo das variáveis de ambiente
 ├── .gitignore                   # Proteção contra envio de arquivos sensíveis
 ├── docker-compose.yml           # Orquestração dos containers (Web + Postgres)
-├── Dockerfile                   # Build da imagem Python com dependências
+├── docker-compose.dev.yml       # Ajustes de desenvolvimento (runserver + volume)
+├── Dockerfile                   # Build da imagem Python (usuário não-root)
+├── entrypoint.sh                # Migra, coleta estáticos e inicia o gunicorn
 ├── manage.py                    # Script CLI do Django
 ├── README.md                    # Este arquivo
 ├── SECURITY.md                  # Política e controles de segurança
@@ -210,8 +227,11 @@ sistema-agendamento-lab/
 
 ## 🧭 Próximos passos
 
-- [ ] Servir com `gunicorn` + WhiteNoise no lugar do `runserver`.
 - [ ] Limite de tentativas de login (proteção contra força bruta).
-- [ ] Notificação por e-mail na aprovação de cadastro e na conclusão de solicitações.
+- [ ] Notificação por e-mail na aprovação de cadastro e na conclusão de solicitações (reservas já notificam).
+- [ ] Registro de pagamento, multa de cancelamento e estorno.
+- [ ] Check-in/check-out e controle de não comparecimento.
+- [ ] Relatórios de ocupação e comportamento de uso.
+- [ ] Integração contínua (CI) com testes e verificação de migrações.
 - [ ] Exportação do dashboard financeiro em CSV/PDF.
 - [ ] Trilha de auditoria completa das ações administrativas.

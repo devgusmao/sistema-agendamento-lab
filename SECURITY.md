@@ -41,7 +41,7 @@ código.
 4. Ajustar `ALLOWED_HOSTS` e `CSRF_TRUSTED_ORIGINS` para o domínio real.
 5. Usar PostgreSQL com usuário e senha exclusivos da aplicação.
 6. Servir atrás de proxy reverso com TLS (`SECURE_SSL_REDIRECT` ativo).
-7. Trocar `runserver` por `gunicorn` e servir estáticos por WhiteNoise/Nginx.
+7. Já atendido: o `docker-compose.yml` usa `gunicorn`, estáticos por WhiteNoise e usuário sem privilégios (o `docker-compose.dev.yml` é só para desenvolvimento).
 8. Rodar `python manage.py test` e `python manage.py check --deploy` antes do release.
 
 ## Pendências conhecidas
@@ -55,8 +55,6 @@ Itens identificados e ainda **não** implementados:
   tela, mas vale avaliar a troca por confirmação por e-mail.
 - **Sem registro de auditoria.** Cancelamentos e mudanças de permissão gravam
   autor e data no próprio registro, mas não há trilha de auditoria completa.
-- **`runserver` no `docker-compose.yml`.** Adequado para desenvolvimento; a
-  implantação real exige `gunicorn`.
 
 ## Proteção de dados pessoais (LGPD)
 
