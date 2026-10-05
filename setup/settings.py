@@ -64,6 +64,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'agendamentos.context_processors.papeis',
             ],
         },
     },
@@ -152,3 +153,31 @@ CSRF_TRUSTED_ORIGINS = config(
     default='http://localhost:8001,http://127.0.0.1:8001',
     cast=Csv(),
 )
+
+# --- Regras de agendamento (ajustáveis por .env) ---
+AGENDAMENTO_DURACAO_MINIMA_MIN = config('AGENDAMENTO_DURACAO_MINIMA_MIN', default=30, cast=int)
+AGENDAMENTO_DURACAO_MAXIMA_MIN = config('AGENDAMENTO_DURACAO_MAXIMA_MIN', default=120, cast=int)
+AGENDAMENTO_BLOCO_MIN = config('AGENDAMENTO_BLOCO_MIN', default=30, cast=int)
+AGENDAMENTO_ANTECEDENCIA_MAXIMA_DIAS = config('AGENDAMENTO_ANTECEDENCIA_MAXIMA_DIAS', default=30, cast=int)
+AGENDAMENTO_MAX_RESERVAS_ATIVAS = config('AGENDAMENTO_MAX_RESERVAS_ATIVAS', default=5, cast=int)
+# Horário de funcionamento (hora cheia, fuso local). 0 e 24 = sem restrição.
+AGENDAMENTO_HORA_ABERTURA = config('AGENDAMENTO_HORA_ABERTURA', default=0, cast=int)
+AGENDAMENTO_HORA_FECHAMENTO = config('AGENDAMENTO_HORA_FECHAMENTO', default=24, cast=int)
+
+# --- E-mail (Gmail via SMTP) ---
+# Sem EMAIL_HOST_USER, os e-mails são apenas impressos no console (modo dev).
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_TIMEOUT = 10
+EMAIL_BACKEND = config(
+    'EMAIL_BACKEND',
+    default=(
+        'django.core.mail.backends.smtp.EmailBackend'
+        if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD
+        else 'django.core.mail.backends.console.EmailBackend'
+    ),
+)
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER or 'noreply@localhost')

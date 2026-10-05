@@ -37,8 +37,12 @@
         <span class="stat-value">{{ proximos|length }}</span>
     </div>
     <div class="stat-card">
-        <span class="stat-label">Total acumulado</span>
+        <span class="stat-label">Já utilizado</span>
         <span class="stat-value">R$ {{ total_gasto|floatformat:2 }}</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Reservas futuras (previsto)</span>
+        <span class="stat-value">R$ {{ total_previsto|floatformat:2 }}</span>
     </div>
 </div>
 
@@ -65,7 +69,7 @@
                         <td>{{ a.computador.laboratorio.nome|default:"-" }}</td>
                         <td>{{ a.data_hora_inicio|date:"d/m/Y H:i" }}</td>
                         <td>{{ a.data_hora_fim|date:"d/m/Y H:i" }}</td>
-                        <td>{{ a.get_finalidade_display }}</td>
+                        <td>{{ a.tipo.nome }}</td>
                         <td>R$ {{ a.valor_total|floatformat:2 }}</td>
                         <td>
                             {% if a.em_andamento %}
@@ -112,7 +116,7 @@
                         <td><strong>{{ a.computador.identificador }}</strong></td>
                         <td>{{ a.data_hora_inicio|date:"d/m/Y H:i" }}</td>
                         <td>{{ a.data_hora_fim|date:"d/m/Y H:i" }}</td>
-                        <td>{{ a.get_finalidade_display }}</td>
+                        <td>{{ a.tipo.nome }}</td>
                         <td>R$ {{ a.valor_total|floatformat:2 }}</td>
                         <td>
                             {% if a.status == 'CANCELADO' %}

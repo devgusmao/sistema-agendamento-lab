@@ -91,7 +91,8 @@ administrador antes de conseguir usar o sistema.
 - Edição de usuários e alteração de nível de permissão.
 - Gestão global de reservas com filtros por usuário, status e período.
 - Dashboard financeiro: receita por laboratório e por máquina, total de horas
-  reservadas e distribuição por finalidade de uso.
+  reservadas e distribuição por tipo de agendamento.
+- Tipos de agendamento e preços configuráveis (tela "Tipos e Preços").
 
 ### Transversais
 - Paginação em todas as listagens.
@@ -137,7 +138,6 @@ automaticamente por signal no cadastro do usuário.
 * `laboratorio`: `ForeignKey` → `Laboratorio`
 * `status`: `DISPONIVEL` | `MANUTENCAO` | `INATIVO`
 * `softwares`: `ManyToManyField` → `Software`
-* `valor_hora`: `DecimalField` — tarifa de co-working
 * `observacoes`: `TextField` (opcional)
 
 #### `Agendamento`
@@ -145,9 +145,15 @@ automaticamente por signal no cadastro do usuário.
 * `computador`: `ForeignKey` → `Computador`
 * `data_hora_inicio` / `data_hora_fim`: `DateTimeField` (fim > início, garantido por constraint)
 * `status`: `CONFIRMADO` | `CANCELADO`
-* `finalidade`: `ESTUDO` | `PROGRAMACAO` | `ADMINISTRATIVO` | `JOGOS`
-* `valor_total`: `DecimalField` — calculado pela duração × tarifa
+* `tipo`: `ForeignKey` → `TipoAgendamento` (cadastro configurável pela administração)
+* `valor_hora_aplicado` / `valor_total`: tarifa e total gravados no momento da reserva (mudanças de preço não alteram reservas já feitas)
 * `criado_em`, `cancelado_em`, `cancelado_por`: rastreabilidade
+
+#### `TipoAgendamento`
+* `nome`, `descricao`, `ativo`, `ordem`
+* `modo`: `FIXO` (cobra `valor_hora` por hora de uso) | `GRATUITO`
+* Todo valor é definido aqui; a máquina não tem preço próprio
+* `duracao_maxima_min`: limite de duração específico do tipo (opcional)
 
 #### `SolicitacaoInstalacao`
 * `usuario`: `ForeignKey` → `User`

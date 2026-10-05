@@ -107,7 +107,7 @@
                         </td>
                         <td>{{ a.data_hora_inicio|date:"d/m/Y H:i" }}</td>
                         <td>{{ a.data_hora_fim|date:"d/m/Y H:i" }}</td>
-                        <td>{{ a.get_finalidade_display }}</td>
+                        <td>{{ a.tipo.nome }}</td>
                         <td>R$ {{ a.valor_total|floatformat:2 }}</td>
                         <td>
                             {% if a.status == 'CANCELADO' %}

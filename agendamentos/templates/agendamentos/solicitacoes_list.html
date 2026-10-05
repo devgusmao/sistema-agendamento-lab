@@ -75,6 +75,10 @@
         <span class="stat-label">Rejeitados</span>
         <span class="stat-value">{{ status_counts.rejeitado }}</span>
     </a>
+    <a href="?status=CANCELADO" class="stat-card {% if status_filtro == 'CANCELADO' %}is-active{% endif %}">
+        <span class="stat-label">Retirados</span>
+        <span class="stat-value">{{ status_counts.cancelado }}</span>
+    </a>
 </div>
 
 <div class="card-table">
@@ -117,14 +121,14 @@
                                             <button type="submit" class="btn-action btn-work">Em Andamento</button>
                                         </form>
                                     {% endif %}
-                                    {% if sol.status != 'CONCLUIDO' %}
+                                    {% if sol.status == 'PENDENTE' or sol.status == 'EM_ANDAMENTO' %}
                                         <form method="post" action="{% url 'atualizar_status_solicitacao' sol.id %}" class="btn-inline-form">
                                             {% csrf_token %}
                                             <input type="hidden" name="novo_status" value="CONCLUIDO">
                                             <button type="submit" class="btn-action btn-ok">Concluir</button>
                                         </form>
                                     {% endif %}
-                                    {% if sol.status != 'REJEITADO' and sol.status != 'CONCLUIDO' %}
+                                    {% if sol.status == 'PENDENTE' or sol.status == 'EM_ANDAMENTO' %}
                                         <form method="post" action="{% url 'atualizar_status_solicitacao' sol.id %}" class="btn-inline-form"
                                               onsubmit="return confirm('Rejeitar esta solicitação?')">
                                             {% csrf_token %}

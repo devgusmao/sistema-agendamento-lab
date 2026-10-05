@@ -12,7 +12,19 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .forms import AgendamentoForm, SolicitacaoInstalacaoForm
-from .models import Agendamento, Computador, Laboratorio, Perfil, Software, SolicitacaoInstalacao
+from .models import Agendamento, Computador, Laboratorio, Perfil, Software, SolicitacaoInstalacao, TipoAgendamento
+
+
+def id_tipo(nome='Estudo'):
+    """Id de um dos tipos criados pela migração de dados (busca por trecho do nome)."""
+    return TipoAgendamento.objects.get(nome__istartswith=nome).id
+
+
+def proximo_bloco(delta=timedelta(hours=2), bloco=30):
+    """Horário local futuro alinhado a blocos de `bloco` minutos (regra de agendamento)."""
+    dt = timezone.localtime(timezone.now() + delta).replace(second=0, microsecond=0)
+    resto = dt.minute % bloco
+    return dt + timedelta(minutes=bloco - resto) if resto else dt
 
 
 def criar_usuario(username, tipo='ALUNO', aprovado=True, **kwargs):
@@ -38,36 +50,36 @@ class PerfilSignalTests(TestCase):
 
 class AgendamentoFormTests(TestCase):
     def _dados(self, **over):
-        inicio = timezone.localtime(timezone.now() + timedelta(hours=2))
+        inicio = proximo_bloco(timedelta(hours=2))
         dados = {
-            'finalidade': 'ESTUDO',
+            'tipo': id_tipo('Estudo'),
             'data_hora_inicio': inicio.strftime('%Y-%m-%d %H:%M'),
             'data_hora_fim': (inicio + timedelta(hours=1)).strftime('%Y-%m-%d %H:%M'),
         }
         dados.update(over)
         return dados
 
-    def test_form_valido_com_finalidade(self):
+    def test_form_valido_com_tipo(self):
         self.assertTrue(AgendamentoForm(self._dados()).is_valid())
 
-    def test_finalidade_ausente_invalida_o_form(self):
+    def test_tipo_ausente_invalida_o_form(self):
         """Regressão: o template não renderizava `finalidade`, então nenhuma
         reserva podia ser criada. O campo continua obrigatório de propósito."""
         dados = self._dados()
-        del dados['finalidade']
+        del dados['tipo']
         form = AgendamentoForm(dados)
         self.assertFalse(form.is_valid())
-        self.assertIn('finalidade', form.errors)
+        self.assertIn('tipo', form.errors)
 
     def test_rejeita_duracao_acima_de_duas_horas(self):
-        inicio = timezone.localtime(timezone.now() + timedelta(hours=2))
+        inicio = proximo_bloco(timedelta(hours=2))
         form = AgendamentoForm(self._dados(
             data_hora_fim=(inicio + timedelta(hours=3)).strftime('%Y-%m-%d %H:%M')
         ))
         self.assertFalse(form.is_valid())
 
     def test_rejeita_inicio_no_passado(self):
-        passado = timezone.localtime(timezone.now() - timedelta(hours=3))
+        passado = proximo_bloco(timedelta(hours=-3))
         form = AgendamentoForm(self._dados(
             data_hora_inicio=passado.strftime('%Y-%m-%d %H:%M'),
             data_hora_fim=(passado + timedelta(hours=1)).strftime('%Y-%m-%d %H:%M'),
@@ -75,7 +87,7 @@ class AgendamentoFormTests(TestCase):
         self.assertFalse(form.is_valid())
 
     def test_rejeita_antecedencia_maior_que_30_dias(self):
-        distante = timezone.localtime(timezone.now() + timedelta(days=45))
+        distante = proximo_bloco(timedelta(days=45))
         form = AgendamentoForm(self._dados(
             data_hora_inicio=distante.strftime('%Y-%m-%d %H:%M'),
             data_hora_fim=(distante + timedelta(hours=1)).strftime('%Y-%m-%d %H:%M'),
@@ -87,15 +99,16 @@ class CriarAgendamentoViewTests(TestCase):
     def setUp(self):
         self.lab = Laboratorio.objects.create(nome='Lab 01', capacidade=10)
         self.pc = Computador.objects.create(
-            identificador='PC-01', laboratorio=self.lab, valor_hora=Decimal('5.00')
+            identificador='PC-01', laboratorio=self.lab
         )
+        TipoAgendamento.objects.filter(nome__istartswith='Desenv').update(valor_hora=Decimal('5.00'), modo='FIXO')
         self.aluno = criar_usuario('aluno')
         self.client.force_login(self.aluno)
 
     def _payload(self, horas=2, offset=1):
-        inicio = timezone.localtime(timezone.now() + timedelta(hours=offset))
+        inicio = proximo_bloco(timedelta(hours=offset))
         return {
-            'finalidade': 'PROGRAMACAO',
+            'tipo': id_tipo('Desenvolvimento'),
             'data_hora_inicio': inicio.strftime('%Y-%m-%d %H:%M'),
             'data_hora_fim': (inicio + timedelta(hours=horas)).strftime('%Y-%m-%d %H:%M'),
         }
@@ -137,8 +150,8 @@ class CancelamentoTests(TestCase):
         self.dono = criar_usuario('dono')
         self.outro = criar_usuario('outro')
         self.admin = criar_usuario('gestor', tipo='ADMIN')
-        inicio = timezone.now() + timedelta(hours=3)
-        self.agendamento = Agendamento.objects.create(
+        inicio = proximo_bloco(timedelta(hours=3))
+        self.agendamento = Agendamento.objects.create(tipo_id=id_tipo('Desenv'), 
             usuario=self.dono, computador=self.pc,
             data_hora_inicio=inicio, data_hora_fim=inicio + timedelta(hours=1),
         )
@@ -191,7 +204,7 @@ class CancelamentoTests(TestCase):
         self.client.force_login(self.outro)
         inicio = timezone.localtime(self.agendamento.data_hora_inicio)
         resposta = self.client.post(reverse('criar_agendamento', args=[self.pc.id]), {
-            'finalidade': 'ESTUDO',
+            'tipo': id_tipo('Estudo'),
             'data_hora_inicio': inicio.strftime('%Y-%m-%d %H:%M'),
             'data_hora_fim': (inicio + timedelta(hours=1)).strftime('%Y-%m-%d %H:%M'),
         })
@@ -379,15 +392,15 @@ class ListagensTests(TestCase):
 
     def test_dashboard_financeiro_soma_apenas_reservas_confirmadas(self):
         lab = Laboratorio.objects.create(nome='Lab 05')
-        pc = Computador.objects.create(identificador='PC-08', laboratorio=lab, valor_hora=Decimal('10.00'))
+        pc = Computador.objects.create(identificador='PC-08', laboratorio=lab)
         aluno = criar_usuario('aluno')
         inicio = timezone.now() + timedelta(hours=2)
 
-        Agendamento.objects.create(
+        Agendamento.objects.create(tipo_id=id_tipo('Desenv'), 
             usuario=aluno, computador=pc, data_hora_inicio=inicio,
             data_hora_fim=inicio + timedelta(hours=1), valor_total=Decimal('10.00'),
         )
-        Agendamento.objects.create(
+        Agendamento.objects.create(tipo_id=id_tipo('Desenv'), 
             usuario=aluno, computador=pc, data_hora_inicio=inicio + timedelta(hours=5),
             data_hora_fim=inicio + timedelta(hours=6), valor_total=Decimal('99.00'),
             status='CANCELADO',
@@ -517,3 +530,421 @@ class ResetarSenhaUsuarioTests(TestCase):
         })
         self.esquecido.refresh_from_db()
         self.assertTrue(self.esquecido.check_password('senha-de-teste-123'))
+
+
+class AcessoDeContaRevogadaTests(TestCase):
+    """Etapa 1: admin/técnico com acesso revogado não pode manter privilégios."""
+
+    def setUp(self):
+        self.client.defaults['wsgi.url_scheme'] = 'https'
+        self.admin_revogado = criar_usuario('adm_revogado', tipo='ADMIN', aprovado=False)
+        self.tecnico_revogado = criar_usuario('tec_revogado', tipo='TECNICO', aprovado=False)
+        self.admin = criar_usuario('adm', tipo='ADMIN')
+        self.root = User.objects.create_superuser('root', 'root@example.com', 'senha-de-teste-123')
+
+    def test_admin_revogado_nao_acessa_gestao(self):
+        self.client.force_login(self.admin_revogado)
+        for nome in ('gerenciar_agendamentos', 'dashboard_financeiro', 'liberar_usuarios', 'gerenciar_usuarios'):
+            resp = self.client.get(reverse(nome), secure=True)
+            self.assertEqual(resp.status_code, 302, nome)
+
+    def test_tecnico_revogado_nao_acessa_telas_de_ti(self):
+        self.client.force_login(self.tecnico_revogado)
+        resp = self.client.get(reverse('listar_laboratorios'), secure=True)
+        self.assertEqual(resp.status_code, 302)
+
+    def test_conta_revogada_nao_cancela_agendamento(self):
+        lab = Laboratorio.objects.create(nome='L')
+        pc = Computador.objects.create(identificador='PC', laboratorio=lab)
+        agora = timezone.now()
+        ag = Agendamento.objects.create(tipo_id=id_tipo('Desenv'), 
+            usuario=self.admin_revogado, computador=pc,
+            data_hora_inicio=agora + timedelta(hours=1), data_hora_fim=agora + timedelta(hours=2),
+        )
+        self.client.force_login(self.admin_revogado)
+        resp = self.client.post(reverse('cancelar_agendamento', args=[ag.id]), secure=True)
+        self.assertEqual(resp.status_code, 403)
+        ag.refresh_from_db()
+        self.assertEqual(ag.status, 'CONFIRMADO')
+
+    def test_admin_comum_nao_edita_superusuario(self):
+        self.client.force_login(self.admin)
+        resp = self.client.post(
+            reverse('editar_usuario', args=[self.root.id]),
+            {'username': 'root', 'email': 'hack@example.com', 'tipo': 'ALUNO', 'aprovado': ''},
+            secure=True,
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.root.refresh_from_db()
+        self.assertEqual(self.root.email, 'root@example.com')
+
+    def test_admin_comum_nao_revoga_outro_admin(self):
+        outro = criar_usuario('outro_adm', tipo='ADMIN')
+        self.client.force_login(self.admin)
+        self.client.post(reverse('revogar_usuario', args=[outro.perfil.id]), secure=True)
+        outro.perfil.refresh_from_db()
+        self.assertTrue(outro.perfil.aprovado)
+
+    def test_superusuario_revoga_admin(self):
+        outro = criar_usuario('outro_adm2', tipo='ADMIN')
+        self.client.force_login(self.root)
+        self.client.post(reverse('revogar_usuario', args=[outro.perfil.id]), secure=True)
+        outro.perfil.refresh_from_db()
+        self.assertFalse(outro.perfil.aprovado)
+
+
+class IntegridadeFinanceiraTests(TestCase):
+    """Etapa 2: histórico financeiro não pode ser apagado em cascata."""
+
+    def setUp(self):
+        self.admin = criar_usuario('adm2', tipo='ADMIN')
+        self.aluno = criar_usuario('aluno2')
+        self.lab = Laboratorio.objects.create(nome='Lab P', capacidade=1)
+        self.pc = Computador.objects.create(identificador='PC1', laboratorio=self.lab)
+        agora = timezone.now()
+        self.ag = Agendamento.objects.create(tipo_id=id_tipo('Desenv'), 
+            usuario=self.aluno, computador=self.pc,
+            data_hora_inicio=agora + timedelta(hours=1), data_hora_fim=agora + timedelta(hours=2),
+            valor_total=Decimal('10.00'),
+        )
+        self.client.force_login(self.admin)
+
+    def test_nao_exclui_usuario_com_reservas(self):
+        self.client.post(reverse('deletar_usuario', args=[self.aluno.id]), secure=True)
+        self.assertTrue(User.objects.filter(pk=self.aluno.pk).exists())
+        self.assertTrue(Agendamento.objects.filter(pk=self.ag.pk).exists())
+
+    def test_nao_exclui_computador_com_reservas(self):
+        self.client.post(reverse('excluir_computador', args=[self.pc.id]), secure=True)
+        self.assertTrue(Computador.objects.filter(pk=self.pc.pk).exists())
+
+    def test_exclui_computador_sem_reservas(self):
+        livre = Computador.objects.create(identificador='PC2', laboratorio=Laboratorio.objects.create(nome='Lab Q'))
+        self.client.post(reverse('excluir_computador', args=[livre.id]), secure=True)
+        self.assertFalse(Computador.objects.filter(pk=livre.pk).exists())
+
+    def test_excluir_computador_exige_admin(self):
+        tec = criar_usuario('tec2', tipo='TECNICO')
+        self.client.force_login(tec)
+        self.client.post(reverse('excluir_computador', args=[self.pc.id]), secure=True)
+        self.assertTrue(Computador.objects.filter(pk=self.pc.pk).exists())
+
+    def test_laboratorio_com_maquina_protegido_no_banco(self):
+        from django.db.models.deletion import ProtectedError
+        with self.assertRaises(ProtectedError):
+            self.lab.delete()
+
+    def test_reserva_grava_tarifa_aplicada(self):
+        TipoAgendamento.objects.filter(nome__istartswith='Estudo').update(valor_hora=Decimal('10.00'), modo='FIXO')
+        self.client.force_login(self.aluno)
+        inicio = proximo_bloco(timedelta(days=1))
+        self.client.post(reverse('criar_agendamento', args=[self.pc.id]), {
+            'tipo': id_tipo('Estudo'),
+            'data_hora_inicio': inicio.strftime('%Y-%m-%d %H:%M'),
+            'data_hora_fim': (inicio + timedelta(hours=1)).strftime('%Y-%m-%d %H:%M'),
+        }, secure=True)
+        novo = Agendamento.objects.exclude(pk=self.ag.pk).get()
+        self.assertEqual(novo.valor_hora_aplicado, Decimal('10.00'))
+        TipoAgendamento.objects.filter(nome__istartswith='Desenv').update(valor_hora=Decimal('99.00'))
+        novo.refresh_from_db()
+        self.assertEqual(novo.valor_hora_aplicado, Decimal('10.00'))
+
+    def test_capacidade_do_laboratorio_limita_maquinas(self):
+        from .forms import ComputadorForm
+        form = ComputadorForm({'identificador': 'PC9', 'laboratorio': self.lab.id,
+                               'status': 'DISPONIVEL'})
+        self.assertFalse(form.is_valid())
+        self.assertIn('laboratorio', form.errors)
+        # editar a máquina já existente continua permitido
+        form = ComputadorForm({'identificador': 'PC1', 'laboratorio': self.lab.id,
+                               'status': 'DISPONIVEL'}, instance=self.pc)
+        self.assertTrue(form.is_valid(), form.errors)
+
+
+class RegrasDeAgendamentoTests(TestCase):
+    """Etapa 3: regras de duração, blocos, conflitos por usuário, limite e manutenção."""
+
+    def setUp(self):
+        self.lab = Laboratorio.objects.create(nome='Lab R')
+        self.pc1 = Computador.objects.create(identificador='R1', laboratorio=self.lab)
+        self.pc2 = Computador.objects.create(identificador='R2', laboratorio=self.lab)
+        self.aluno = criar_usuario('aluno_r', email='aluno_r@example.com')
+        self.tec = criar_usuario('tec_r', tipo='TECNICO')
+        self.client.force_login(self.aluno)
+
+    def _post(self, pc, inicio, minutos=60):
+        return self.client.post(reverse('criar_agendamento', args=[pc.id]), {
+            'tipo': id_tipo('Estudo'),
+            'data_hora_inicio': inicio.strftime('%Y-%m-%d %H:%M'),
+            'data_hora_fim': (inicio + timedelta(minutes=minutos)).strftime('%Y-%m-%d %H:%M'),
+        })
+
+    def test_rejeita_horario_fora_do_bloco(self):
+        inicio = proximo_bloco(timedelta(hours=3)) + timedelta(minutes=10)
+        self._post(self.pc1, inicio)
+        self.assertEqual(Agendamento.objects.count(), 0)
+
+    def test_rejeita_duracao_minima(self):
+        self._post(self.pc1, proximo_bloco(), minutos=0)
+        self.assertEqual(Agendamento.objects.count(), 0)
+
+    def test_aceita_bloco_de_30_min(self):
+        TipoAgendamento.objects.filter(nome__istartswith='Estudo').update(valor_hora=Decimal('4.00'), modo='FIXO')
+        self._post(self.pc1, proximo_bloco(), minutos=30)
+        self.assertEqual(Agendamento.objects.get().valor_total, Decimal('2.00'))
+
+    def test_usuario_nao_reserva_duas_maquinas_no_mesmo_horario(self):
+        inicio = proximo_bloco()
+        self._post(self.pc1, inicio)
+        self._post(self.pc2, inicio)
+        self.assertEqual(Agendamento.objects.count(), 1)
+
+    def test_limite_de_reservas_ativas(self):
+        with self.settings(AGENDAMENTO_MAX_RESERVAS_ATIVAS=2):
+            base = proximo_bloco(timedelta(hours=3))
+            for i in range(3):
+                self._post(self.pc1, base + timedelta(hours=2 * i), minutos=60)
+        self.assertEqual(Agendamento.objects.count(), 2)
+
+    def test_horario_de_funcionamento(self):
+        with self.settings(AGENDAMENTO_HORA_ABERTURA=7, AGENDAMENTO_HORA_FECHAMENTO=22):
+            noite = proximo_bloco(timedelta(days=1)).replace(hour=23, minute=0)
+            self._post(self.pc1, noite)
+            self.assertEqual(Agendamento.objects.count(), 0)
+            dia = noite.replace(hour=10)
+            self._post(self.pc1, dia)
+            self.assertEqual(Agendamento.objects.count(), 1)
+
+    def test_manutencao_cancela_reservas_futuras_e_avisa(self):
+        from django.core import mail
+        self._post(self.pc1, proximo_bloco(timedelta(hours=3)))
+        ag = Agendamento.objects.get()
+        self.client.force_login(self.tec)
+        with self.captureOnCommitCallbacks(execute=True):
+            resp = self.client.post(reverse('editar_computador', args=[self.pc1.id]), {
+                'identificador': 'R1', 'laboratorio': self.lab.id,
+                'status': 'MANUTENCAO',
+            })
+        self.assertEqual(resp.status_code, 302)
+        ag.refresh_from_db()
+        self.assertEqual(ag.status, 'CANCELADO')
+        self.assertEqual(ag.cancelado_por_id, self.tec.id)
+        self.assertTrue(any('cancelada' in m.subject.lower() for m in mail.outbox))
+
+    def test_confirmacao_envia_email(self):
+        from django.core import mail
+        with self.captureOnCommitCallbacks(execute=True):
+            self._post(self.pc1, proximo_bloco(timedelta(hours=3)))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ['aluno_r@example.com'])
+
+    def test_usuario_sem_email_nao_quebra(self):
+        sem = criar_usuario('sem_email')
+        self.client.force_login(sem)
+        with self.captureOnCommitCallbacks(execute=True):
+            self._post(self.pc1, proximo_bloco(timedelta(hours=3)))
+        self.assertEqual(Agendamento.objects.count(), 1)
+
+
+class FluxoSolicitacaoTests(TestCase):
+    """Etapa 4: transições válidas, histórico e inventário."""
+
+    def setUp(self):
+        self.tec = criar_usuario('tec_s', tipo='TECNICO')
+        self.aluno = criar_usuario('aluno_s')
+        self.lab = Laboratorio.objects.create(nome='Lab S')
+        self.pc = Computador.objects.create(identificador='S1', laboratorio=self.lab)
+        self.sw = Software.objects.create(nome='Docker', versao='24')
+        self.sol = SolicitacaoInstalacao.objects.create(
+            usuario=self.aluno, computador=self.pc, laboratorio=self.lab,
+            software_nome='Docker 24', justificativa='Preciso para a disciplina X',
+        )
+
+    def _status(self, novo):
+        self.client.force_login(self.tec)
+        self.client.post(reverse('atualizar_status_solicitacao', args=[self.sol.id]), {'novo_status': novo})
+        self.sol.refresh_from_db()
+
+    def test_concluir_adiciona_software_ao_inventario(self):
+        self._status('CONCLUIDO')
+        self.assertEqual(self.sol.status, 'CONCLUIDO')
+        self.assertIn(self.sw, self.pc.softwares.all())
+
+    def test_concluir_software_desconhecido_nao_quebra(self):
+        self.sol.software_nome = 'Programa Inexistente'
+        self.sol.save()
+        self._status('CONCLUIDO')
+        self.assertEqual(self.sol.status, 'CONCLUIDO')
+        self.assertEqual(self.pc.softwares.count(), 0)
+
+    def test_estado_final_nao_volta(self):
+        self._status('CONCLUIDO')
+        self._status('PENDENTE')
+        self.assertEqual(self.sol.status, 'CONCLUIDO')
+
+    def test_tecnico_nao_marca_como_cancelado(self):
+        self._status('CANCELADO')
+        self.assertEqual(self.sol.status, 'PENDENTE')
+
+    def test_retirar_mantem_historico(self):
+        self.client.force_login(self.aluno)
+        self.client.post(reverse('cancelar_solicitacao', args=[self.sol.id]))
+        self.sol.refresh_from_db()
+        self.assertEqual(self.sol.status, 'CANCELADO')
+
+    def test_nao_retira_solicitacao_em_andamento(self):
+        self._status('EM_ANDAMENTO')
+        self.client.force_login(self.aluno)
+        self.client.post(reverse('cancelar_solicitacao', args=[self.sol.id]))
+        self.sol.refresh_from_db()
+        self.assertEqual(self.sol.status, 'EM_ANDAMENTO')
+
+    def test_maquina_inativa_nao_recebe_solicitacao(self):
+        self.pc.status = 'INATIVO'
+        self.pc.save()
+        self.client.force_login(self.aluno)
+        self.client.post(reverse('criar_solicitacao_instalacao', args=[self.pc.id]), {
+            'software_nome': 'Git', 'justificativa': 'Controle de versão das aulas',
+        })
+        self.assertEqual(SolicitacaoInstalacao.objects.count(), 1)
+
+
+class DashboardFinanceiroTests(TestCase):
+    """Etapa 5: realizada × prevista, período, cancelamento e horas."""
+
+    def setUp(self):
+        self.admin = criar_usuario('adm_dash', tipo='ADMIN')
+        self.aluno = criar_usuario('aluno_dash')
+        self.lab = Laboratorio.objects.create(nome='Lab D')
+        self.pc = Computador.objects.create(identificador='D1', laboratorio=self.lab)
+        agora = timezone.now()
+        mk = lambda ini, h, valor, status='CONFIRMADO': Agendamento.objects.create(tipo_id=id_tipo('Desenv'), 
+            usuario=self.aluno, computador=self.pc, data_hora_inicio=ini,
+            data_hora_fim=ini + timedelta(hours=h), valor_total=Decimal(valor), status=status,
+        )
+        self.passada = mk(agora - timedelta(days=40), 2, '20.00')       # realizada (2h)
+        self.futura = mk(agora + timedelta(days=1), 1, '10.00')          # prevista (1h)
+        self.cancelada = mk(agora + timedelta(days=2), 1, '10.00', 'CANCELADO')
+        self.client.force_login(self.admin)
+
+    def _ctx(self, **params):
+        return self.client.get(reverse('dashboard_financeiro'), params).context
+
+    def test_separa_realizada_e_prevista(self):
+        ctx = self._ctx()
+        self.assertEqual(ctx['receita_realizada'], Decimal('20.00'))
+        self.assertEqual(ctx['receita_prevista'], Decimal('10.00'))
+        self.assertEqual(ctx['total_geral'], Decimal('30.00'))
+        self.assertEqual(ctx['valor_cancelado'], Decimal('10.00'))
+
+    def test_horas_e_taxa_de_cancelamento(self):
+        ctx = self._ctx()
+        self.assertEqual(ctx['horas_reservadas'], 3.0)
+        self.assertEqual(ctx['total_reservas'], 2)
+        self.assertAlmostEqual(ctx['taxa_cancelamento'], 33.3, places=1)
+        self.assertEqual(ctx['ticket_medio'], Decimal('15.00'))
+
+    def test_filtro_de_periodo(self):
+        hoje = timezone.localdate()
+        ctx = self._ctx(de=hoje.isoformat())
+        self.assertEqual(ctx['receita_realizada'], Decimal('0.00'))
+        self.assertEqual(ctx['receita_prevista'], Decimal('10.00'))
+
+    def test_data_invalida_e_ignorada(self):
+        ctx = self._ctx(de='lixo', ate='99-99-99')
+        self.assertEqual(ctx['total_geral'], Decimal('30.00'))
+
+    def test_filtro_por_laboratorio(self):
+        outro = Laboratorio.objects.create(nome='Lab E')
+        ctx = self._ctx(laboratorio=outro.id)
+        self.assertEqual(ctx['total_geral'], Decimal('0.00'))
+
+    def test_pagina_renderiza(self):
+        resp = self.client.get(reverse('dashboard_financeiro'))
+        self.assertContains(resp, 'Receita realizada')
+
+    def test_meus_agendamentos_separa_usado_e_previsto(self):
+        self.client.force_login(self.aluno)
+        ctx = self.client.get(reverse('meus_agendamentos')).context
+        self.assertEqual(ctx['total_gasto'], Decimal('20.00'))
+        self.assertEqual(ctx['total_previsto'], Decimal('10.00'))
+
+
+class TipoAgendamentoPrecoTests(TestCase):
+    """Preço configurável por tipo de agendamento."""
+
+    def setUp(self):
+        self.admin = criar_usuario('adm_tipo', tipo='ADMIN')
+        self.aluno = criar_usuario('aluno_tipo')
+        self.lab = Laboratorio.objects.create(nome='Lab T')
+        self.pc = Computador.objects.create(identificador='T1', laboratorio=self.lab)
+
+    def _reservar(self, tipo, minutos=60):
+        self.client.force_login(self.aluno)
+        inicio = proximo_bloco(timedelta(hours=3))
+        return self.client.post(reverse('criar_agendamento', args=[self.pc.id]), {
+            'tipo': tipo.id,
+            'data_hora_inicio': inicio.strftime('%Y-%m-%d %H:%M'),
+            'data_hora_fim': (inicio + timedelta(minutes=minutos)).strftime('%Y-%m-%d %H:%M'),
+        })
+
+    def test_migracao_criou_tipos_padrao(self):
+        self.assertGreaterEqual(TipoAgendamento.objects.count(), 4)
+
+    def test_modo_fixo_calcula_pela_duracao(self):
+        t = TipoAgendamento.objects.create(nome='Evento', modo='FIXO', valor_hora=Decimal('30.00'))
+        self._reservar(t, 60)
+        self.assertEqual(Agendamento.objects.get().valor_total, Decimal('30.00'))
+
+    def test_modo_gratuito(self):
+        t = TipoAgendamento.objects.create(nome='Aula', modo='GRATUITO')
+        self._reservar(t, 60)
+        self.assertEqual(Agendamento.objects.get().valor_total, Decimal('0.00'))
+
+    def test_tipo_inativo_nao_pode_ser_usado(self):
+        t = TipoAgendamento.objects.create(nome='Antigo', modo='GRATUITO', ativo=False)
+        self._reservar(t)
+        self.assertEqual(Agendamento.objects.count(), 0)
+
+    def test_duracao_maxima_por_tipo(self):
+        t = TipoAgendamento.objects.create(nome='Longo', modo='GRATUITO', duracao_maxima_min=240)
+        self._reservar(t, 240)
+        self.assertEqual(Agendamento.objects.count(), 1)
+
+    def test_mudar_preco_nao_altera_reservas_existentes(self):
+        t = TipoAgendamento.objects.create(nome='Var', modo='FIXO', valor_hora=Decimal('8.00'))
+        self._reservar(t, 60)
+        t.valor_hora = Decimal('99.00')
+        t.save()
+        self.assertEqual(Agendamento.objects.get().valor_total, Decimal('8.00'))
+
+    def test_admin_cria_tipo_pela_tela(self):
+        self.client.force_login(self.admin)
+        self.client.post(reverse('cadastrar_tipo_agendamento'), {
+            'nome': 'Comunidade', 'modo': 'FIXO', 'valor_hora': '12.00',
+            'ordem': '5', 'ativo': 'on',
+        })
+        self.assertEqual(TipoAgendamento.objects.get(nome='Comunidade').valor_hora, Decimal('12.00'))
+
+    def test_modo_fixo_exige_valor(self):
+        from .forms import TipoAgendamentoForm
+        form = TipoAgendamentoForm({'nome': 'X', 'modo': 'FIXO', 'ordem': 0, 'ativo': True})
+        self.assertFalse(form.is_valid())
+        self.assertIn('valor_hora', form.errors)
+
+    def test_aluno_nao_acessa_tela_de_tipos(self):
+        self.client.force_login(self.aluno)
+        resp = self.client.get(reverse('listar_tipos_agendamento'))
+        self.assertEqual(resp.status_code, 302)
+
+    def test_tipo_usado_nao_e_excluido(self):
+        t = TipoAgendamento.objects.create(nome='Usado', modo='GRATUITO')
+        self._reservar(t)
+        self.client.force_login(self.admin)
+        self.client.post(reverse('excluir_tipo_agendamento', args=[t.id]))
+        self.assertTrue(TipoAgendamento.objects.filter(pk=t.pk).exists())
+
+    def test_tela_de_agendar_renderiza_com_taxas(self):
+        self.client.force_login(self.aluno)
+        resp = self.client.get(reverse('criar_agendamento', args=[self.pc.id]))
+        self.assertContains(resp, 'taxas-data')
