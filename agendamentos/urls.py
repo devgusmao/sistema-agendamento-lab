@@ -24,6 +24,7 @@ urlpatterns = [
     path('computadores/', views.listar_computadores, name='listar_computadores'),
     path('computadores/novo/', views.cadastrar_computador, name='cadastrar_computador'),
     path('computadores/<int:computador_id>/editar/', views.editar_computador, name='editar_computador'),
+    path('computadores/<int:computador_id>/excluir/', views.excluir_computador, name='excluir_computador'),
 
     # --- INVENTÁRIO DE SOFTWARES ---
     path('softwares/', views.listar_softwares, name='listar_softwares'),
@@ -42,6 +43,12 @@ urlpatterns = [
     path('agendamentos/<int:agendamento_id>/cancelar/', views.cancelar_agendamento, name='cancelar_agendamento'),
     path('gestao/agendamentos/', views.gerenciar_agendamentos, name='gerenciar_agendamentos'),
     path('gestao/dashboard/', views.dashboard_financeiro, name='dashboard_financeiro'),
+
+    # --- TIPOS DE AGENDAMENTO E PREÇOS ---
+    path('gestao/tipos-agendamento/', views.listar_tipos_agendamento, name='listar_tipos_agendamento'),
+    path('gestao/tipos-agendamento/novo/', views.salvar_tipo_agendamento, name='cadastrar_tipo_agendamento'),
+    path('gestao/tipos-agendamento/<int:tipo_id>/editar/', views.salvar_tipo_agendamento, name='editar_tipo_agendamento'),
+    path('gestao/tipos-agendamento/<int:tipo_id>/excluir/', views.excluir_tipo_agendamento, name='excluir_tipo_agendamento'),
 
     # --- GESTÃO DE USUÁRIOS E PERMISSÕES ---
     path('gestao/liberar-usuarios/', views.liberar_usuarios, name='liberar_usuarios'),

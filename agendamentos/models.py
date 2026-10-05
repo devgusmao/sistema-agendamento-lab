@@ -1,3 +1,5 @@
+from decimal import ROUND_HALF_UP, Decimal
+
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -80,13 +82,12 @@ class Computador(models.Model):
     ]
 
     identificador = models.CharField(max_length=50)
-    laboratorio = models.ForeignKey(Laboratorio, on_delete=models.CASCADE, related_name='computadores')
+    laboratorio = models.ForeignKey(Laboratorio, on_delete=models.PROTECT, related_name='computadores')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='DISPONIVEL')
     observacoes = models.TextField(blank=True, null=True)
 
     # Co-working & Inventário
     softwares = models.ManyToManyField(Software, blank=True, related_name='computadores')
-    valor_hora = models.DecimalField(max_digits=6, decimal_places=2, default=0.00, help_text="Tarifa por hora de uso")
 
     class Meta:
         ordering = ['laboratorio__nome', 'identificador']
@@ -105,27 +106,74 @@ class Computador(models.Model):
         return f"{self.identificador} ({self.laboratorio.nome})"
 
 
+class TipoAgendamento(models.Model):
+    """Tipo de uso da máquina, com regra de preço configurável pela administração."""
+
+    MODO_FIXO = 'FIXO'
+    MODO_GRATUITO = 'GRATUITO'
+    MODO_CHOICES = [
+        (MODO_FIXO, 'Valor por hora'),
+        (MODO_GRATUITO, 'Gratuito'),
+    ]
+
+    nome = models.CharField(max_length=60, unique=True)
+    descricao = models.CharField(max_length=200, blank=True)
+    modo = models.CharField(max_length=10, choices=MODO_CHOICES, default=MODO_FIXO)
+    valor_hora = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True,
+        help_text="Tarifa cobrada por hora de uso (ignorada no modo gratuito)",
+    )
+    duracao_maxima_min = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Duração máxima em minutos. Em branco = limite padrão do sistema",
+    )
+    ativo = models.BooleanField(default=True, help_text="Tipos inativos não aparecem para novas reservas")
+    ordem = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['ordem', 'nome']
+        verbose_name = 'Tipo de agendamento'
+        verbose_name_plural = 'Tipos de agendamento'
+
+    def taxa_hora(self):
+        """Tarifa por hora efetivamente cobrada para este tipo."""
+        if self.modo == self.MODO_GRATUITO:
+            return Decimal('0.00')
+        return Decimal(self.valor_hora or 0).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+    def calcular_valor(self, inicio, fim):
+        """Retorna (taxa_hora_aplicada, valor_total) para o intervalo."""
+        taxa = self.taxa_hora()
+        horas = Decimal((fim - inicio).total_seconds()) / Decimal(3600)
+        return taxa, (horas * taxa).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+    def duracao_maxima(self):
+        from django.conf import settings
+        return self.duracao_maxima_min or settings.AGENDAMENTO_DURACAO_MAXIMA_MIN
+
+    def __str__(self):
+        return self.nome
+
+
 class Agendamento(models.Model):
     STATUS_CHOICES = [
         ('CONFIRMADO', 'Confirmado'),
         ('CANCELADO', 'Cancelado'),
     ]
 
-    FINALIDADE_CHOICES = [
-        ('ESTUDO', 'Estudo / Pesquisa'),
-        ('PROGRAMACAO', 'Desenvolvimento / Programação'),
-        ('ADMINISTRATIVO', 'Atividades Administrativas'),
-        ('JOGOS', 'Jogos / Eventos'),
-    ]
-
-    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='agendamentos')
-    computador = models.ForeignKey(Computador, on_delete=models.CASCADE, related_name='agendamentos')
+    # PROTECT: excluir usuário/máquina não pode apagar reservas e a receita já registrada.
+    usuario = models.ForeignKey(User, on_delete=models.PROTECT, related_name='agendamentos')
+    computador = models.ForeignKey(Computador, on_delete=models.PROTECT, related_name='agendamentos')
     data_hora_inicio = models.DateTimeField()
     data_hora_fim = models.DateTimeField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='CONFIRMADO')
 
-    finalidade = models.CharField(max_length=20, choices=FINALIDADE_CHOICES, default='PROGRAMACAO')
+    tipo = models.ForeignKey(TipoAgendamento, on_delete=models.PROTECT, related_name='agendamentos')
     valor_total = models.DecimalField(max_digits=8, decimal_places=2, default=0.00)
+    valor_hora_aplicado = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True,
+        help_text="Tarifa por hora vigente no momento da reserva (auditoria)",
+    )
 
     criado_em = models.DateTimeField(auto_now_add=True, null=True)
     cancelado_em = models.DateTimeField(null=True, blank=True)
@@ -179,7 +227,17 @@ class SolicitacaoInstalacao(models.Model):
         ('EM_ANDAMENTO', 'Em Andamento'),
         ('CONCLUIDO', 'Concluído'),
         ('REJEITADO', 'Rejeitado'),
+        ('CANCELADO', 'Retirado pelo solicitante'),
     ]
+
+    # Transições permitidas para a equipe técnica; CONCLUIDO/REJEITADO/CANCELADO são finais.
+    TRANSICOES = {
+        'PENDENTE': {'EM_ANDAMENTO', 'CONCLUIDO', 'REJEITADO'},
+        'EM_ANDAMENTO': {'CONCLUIDO', 'REJEITADO'},
+        'CONCLUIDO': set(),
+        'REJEITADO': set(),
+        'CANCELADO': set(),
+    }
 
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='solicitacoes_instalacao')
     computador = models.ForeignKey(Computador, on_delete=models.CASCADE, related_name='solicitacoes_instalacao', null=True, blank=True)
@@ -196,6 +254,9 @@ class SolicitacaoInstalacao(models.Model):
     class Meta:
         ordering = ['-data_criacao']
 
+    def pode_mudar_para(self, novo_status):
+        return novo_status in self.TRANSICOES.get(self.status, set())
+
     def destino_display(self):
         if self.computador:
             return f"{self.computador.identificador} ({self.computador.laboratorio.nome})"
@@ -209,18 +270,29 @@ class SolicitacaoInstalacao(models.Model):
 
 # --- Helpers de papel (uma única fonte de verdade para as checagens de acesso) ---
 
+def _tipo_aprovado(user):
+    """Tipo do perfil, mas só se a conta estiver liberada (None caso contrário)."""
+    perfil = getattr(user, 'perfil', None)
+    if perfil is None or not perfil.aprovado:
+        return None
+    return perfil.tipo
+
+
 def perfil_e_admin(user):
-    """Administrador: superusuário do Django ou perfil do tipo ADMIN."""
+    """Administrador aprovado: superusuário do Django ou perfil ADMIN liberado.
+
+    Um ADMIN com acesso revogado (aprovado=False) deixa de ser administrador.
+    """
     if not user.is_authenticated:
         return False
-    return user.is_superuser or getattr(getattr(user, 'perfil', None), 'tipo', None) == 'ADMIN'
+    return user.is_superuser or _tipo_aprovado(user) == 'ADMIN'
 
 
 def perfil_e_gestor(user):
-    """Gestor: administrador ou técnico (acesso às telas de TI)."""
+    """Gestor aprovado: administrador ou técnico (acesso às telas de TI)."""
     if not user.is_authenticated:
         return False
-    return user.is_superuser or getattr(getattr(user, 'perfil', None), 'tipo', None) in ('ADMIN', 'TECNICO')
+    return user.is_superuser or _tipo_aprovado(user) in ('ADMIN', 'TECNICO')
 
 
 def perfil_aprovado(user):

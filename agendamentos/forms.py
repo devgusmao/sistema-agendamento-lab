@@ -1,17 +1,18 @@
 from django import forms
+from django.conf import settings
 from django.contrib.auth.forms import PasswordChangeForm, SetPasswordForm, UserCreationForm
 from django.contrib.auth.models import User
 from django.utils import timezone
 
-from .models import Computador, Perfil, Agendamento, Laboratorio, Software, SolicitacaoInstalacao
+from .models import (
+    Agendamento, Computador, Laboratorio, Perfil, Software, SolicitacaoInstalacao, TipoAgendamento,
+)
 
 
 def _com_classe_form_control(fields):
     for field in fields.values():
         field.widget.attrs.update({'class': 'form-control'})
 
-DURACAO_MAXIMA = timezone.timedelta(hours=2)
-ANTECEDENCIA_MAXIMA = timezone.timedelta(days=30)
 
 
 class CustomUserCreationForm(UserCreationForm):
@@ -74,27 +75,32 @@ class ComputadorForm(forms.ModelForm):
 
     class Meta:
         model = Computador
-        fields = ['identificador', 'laboratorio', 'status', 'valor_hora', 'softwares', 'observacoes']
+        fields = ['identificador', 'laboratorio', 'status', 'softwares', 'observacoes']
         labels = {
             'identificador': 'Identificador da Máquina',
             'laboratorio': 'Laboratório',
             'status': 'Status da Máquina',
-            'valor_hora': 'Valor/Hora (R$)',
             'observacoes': 'Observações',
         }
         widgets = {
             'identificador': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: PC-01'}),
             'laboratorio': forms.Select(attrs={'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
-            'valor_hora': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.50', 'min': '0', 'placeholder': '0.00'}),
             'observacoes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
 
-    def clean_valor_hora(self):
-        valor = self.cleaned_data.get('valor_hora')
-        if valor is not None and valor < 0:
-            raise forms.ValidationError('O valor por hora não pode ser negativo.')
-        return valor
+    def clean(self):
+        cleaned = super().clean()
+        lab = cleaned.get('laboratorio')
+        # capacidade 0 = sem limite definido
+        if lab and lab.capacidade:
+            outras = lab.computadores.exclude(pk=self.instance.pk).count()
+            if outras + 1 > lab.capacidade:
+                self.add_error(
+                    'laboratorio',
+                    f'O laboratório "{lab.nome}" já atingiu a capacidade de {lab.capacidade} máquinas.'
+                )
+        return cleaned
 
 
 class EditarUsuarioForm(forms.ModelForm):
@@ -135,38 +141,74 @@ class EditarUsuarioForm(forms.ModelForm):
 class AgendamentoForm(forms.ModelForm):
     class Meta:
         model = Agendamento
-        fields = ['finalidade', 'data_hora_inicio', 'data_hora_fim']
+        fields = ['tipo', 'data_hora_inicio', 'data_hora_fim']
         labels = {
-            'finalidade': 'Finalidade do Uso',
+            'tipo': 'Tipo de Agendamento',
             'data_hora_inicio': 'Início do Agendamento',
             'data_hora_fim': 'Fim do Agendamento',
         }
         widgets = {
-            'finalidade': forms.Select(attrs={'class': 'form-control'}),
+            'tipo': forms.Select(attrs={'class': 'form-control'}),
             'data_hora_inicio': forms.DateTimeInput(attrs={'class': 'form-control', 'autocomplete': 'off'}),
             'data_hora_fim': forms.DateTimeInput(attrs={'class': 'form-control', 'autocomplete': 'off'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['tipo'].queryset = TipoAgendamento.objects.filter(ativo=True)
+        self.fields['tipo'].empty_label = None
+
     def clean(self):
         cleaned_data = super().clean()
+        tipo = cleaned_data.get('tipo')
         inicio = cleaned_data.get('data_hora_inicio')
         fim = cleaned_data.get('data_hora_fim')
 
         if inicio and fim:
             agora = timezone.now()
 
+            minima = timezone.timedelta(minutes=settings.AGENDAMENTO_DURACAO_MINIMA_MIN)
+            maxima = timezone.timedelta(minutes=tipo.duracao_maxima() if tipo else settings.AGENDAMENTO_DURACAO_MAXIMA_MIN)
+            antecedencia = timezone.timedelta(days=settings.AGENDAMENTO_ANTECEDENCIA_MAXIMA_DIAS)
+            bloco = settings.AGENDAMENTO_BLOCO_MIN
+
             # 5 min de tolerância para o tempo gasto preenchendo o formulário.
             if inicio < agora - timezone.timedelta(minutes=5):
                 raise forms.ValidationError('A data de início do agendamento não pode ser no passado.')
 
-            if inicio > agora + ANTECEDENCIA_MAXIMA:
-                raise forms.ValidationError('Só é possível reservar com até 30 dias de antecedência.')
+            if inicio > agora + antecedencia:
+                raise forms.ValidationError(
+                    f'Só é possível reservar com até {settings.AGENDAMENTO_ANTECEDENCIA_MAXIMA_DIAS} dias de antecedência.'
+                )
 
             if fim <= inicio:
                 raise forms.ValidationError('A data/hora de término deve ser posterior ao horário de início.')
 
-            if fim - inicio > DURACAO_MAXIMA:
-                raise forms.ValidationError('O tempo máximo permitido por reserva é de 2 horas.')
+            for rotulo, dt in (('início', inicio), ('término', fim)):
+                local = timezone.localtime(dt)
+                if local.second or local.microsecond or local.minute % bloco:
+                    raise forms.ValidationError(
+                        f'O {rotulo} deve estar alinhado a blocos de {bloco} minutos (ex.: 14:00, 14:30).'
+                    )
+
+            if fim - inicio < minima:
+                raise forms.ValidationError(f'A duração mínima da reserva é de {settings.AGENDAMENTO_DURACAO_MINIMA_MIN} minutos.')
+
+            if fim - inicio > maxima:
+                horas = maxima.total_seconds() / 3600
+                raise forms.ValidationError(f'O tempo máximo permitido por reserva é de {horas:g} hora(s).')
+
+            abertura, fechamento = settings.AGENDAMENTO_HORA_ABERTURA, settings.AGENDAMENTO_HORA_FECHAMENTO
+            if (abertura, fechamento) != (0, 24):
+                li, lf = timezone.localtime(inicio), timezone.localtime(fim)
+                minutos_ini = li.hour * 60 + li.minute
+                # término à meia-noite do dia seguinte conta como 24h
+                virou_dia = lf.date() > li.date()
+                minutos_fim = 24 * 60 if virou_dia and lf.hour == lf.minute == 0 else lf.hour * 60 + lf.minute
+                if (virou_dia and minutos_fim != 24 * 60) or minutos_ini < abertura * 60 or minutos_fim > fechamento * 60:
+                    raise forms.ValidationError(
+                        f'Os laboratórios funcionam das {abertura:02d}h às {fechamento:02d}h.'
+                    )
 
         return cleaned_data
 
@@ -232,3 +274,40 @@ class ResetarSenhaForm(SetPasswordForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         _com_classe_form_control(self.fields)
+
+
+class TipoAgendamentoForm(forms.ModelForm):
+    class Meta:
+        model = TipoAgendamento
+        fields = ['nome', 'descricao', 'modo', 'valor_hora', 'duracao_maxima_min', 'ordem', 'ativo']
+        labels = {
+            'nome': 'Nome do tipo',
+            'descricao': 'Descrição',
+            'modo': 'Como cobrar',
+            'valor_hora': 'Valor por hora (R$)',
+            'duracao_maxima_min': 'Duração máxima (minutos)',
+            'ordem': 'Ordem de exibição',
+            'ativo': 'Ativo (disponível para novas reservas)',
+        }
+        widgets = {
+            'nome': forms.TextInput(attrs={'class': 'form-control'}),
+            'descricao': forms.TextInput(attrs={'class': 'form-control'}),
+            'modo': forms.Select(attrs={'class': 'form-control'}),
+            'valor_hora': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.50', 'min': '0'}),
+            'duracao_maxima_min': forms.NumberInput(attrs={'class': 'form-control', 'step': '30', 'min': '30'}),
+            'ordem': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'ativo': forms.CheckboxInput(),
+        }
+
+    def clean(self):
+        cleaned = super().clean()
+        modo = cleaned.get('modo')
+        if modo == TipoAgendamento.MODO_FIXO:
+            valor = cleaned.get('valor_hora')
+            if valor is None or valor < 0:
+                self.add_error('valor_hora', 'Informe o valor por hora (zero ou maior).')
+        bloco = settings.AGENDAMENTO_BLOCO_MIN
+        dur = cleaned.get('duracao_maxima_min')
+        if dur is not None and (dur < settings.AGENDAMENTO_DURACAO_MINIMA_MIN or dur % bloco):
+            self.add_error('duracao_maxima_min', f'Use múltiplos de {bloco} minutos, no mínimo {settings.AGENDAMENTO_DURACAO_MINIMA_MIN}.')
+        return cleaned
