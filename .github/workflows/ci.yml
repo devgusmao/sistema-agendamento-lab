@@ -24,7 +24,7 @@ jobs:
     env:
       POSTGRES_HOST: localhost
       SECRET_KEY: ci-only-secret-key
-      DEBUG: "False"
+      DEBUG: "True"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
