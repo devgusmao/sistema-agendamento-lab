@@ -222,7 +222,7 @@ class ControleDeAcessoTests(TestCase):
         self.client.force_login(self.aluno)
         for nome in ['listar_laboratorios', 'listar_computadores', 'listar_softwares',
                      'gerenciar_agendamentos', 'dashboard_financeiro', 'gerenciar_usuarios',
-                     'permissoes_acesso', 'liberar_usuarios']:
+                     'notificacoes', 'configurar_email', 'liberar_usuarios']:
             with self.subTest(view=nome):
                 self.assertRedirects(self.client.get(reverse(nome)), reverse('home'))
 
@@ -274,18 +274,16 @@ class ValidacaoDeEntradaTests(TestCase):
     def test_tipo_de_perfil_invalido_e_recusado(self):
         """Regressão: `novo_tipo` do POST ia direto para o banco."""
         self.client.force_login(self.admin)
-        self.client.post(reverse('permissoes_acesso'), {
-            'perfil_id': self.alvo.perfil.id,
-            'novo_tipo': 'SUPER_HACKER',
+        self.client.post(reverse('editar_usuario', args=[self.alvo.id]), {
+            'username': 'alvo', 'email': '', 'tipo': 'SUPER_HACKER', 'aprovado': 'on',
         })
         self.alvo.perfil.refresh_from_db()
         self.assertEqual(self.alvo.perfil.tipo, 'ALUNO')
 
     def test_admin_nao_rebaixa_a_si_mesmo(self):
         self.client.force_login(self.admin)
-        self.client.post(reverse('permissoes_acesso'), {
-            'perfil_id': self.admin.perfil.id,
-            'novo_tipo': 'ALUNO',
+        self.client.post(reverse('editar_usuario', args=[self.admin.id]), {
+            'username': 'admin_lab', 'email': '', 'tipo': 'ALUNO', 'aprovado': 'on',
         })
         self.admin.perfil.refresh_from_db()
         self.assertEqual(self.admin.perfil.tipo, 'ADMIN')
@@ -978,3 +976,240 @@ class LimiteTentativasLoginTests(TestCase):
             self.tentar('errada')
         resp = self.tentar('senha-de-teste-123')
         self.assertEqual(resp.status_code, 302)
+
+
+class RegrasDeUsuarioTests(TestCase):
+    """Regras de proteção unificadas em `usuarios.erro_ao_alterar`."""
+
+    def setUp(self):
+        self.root = User.objects.create_superuser('root', 'root@example.com', 'senha-de-teste-123')
+        self.admin = criar_usuario('adm', tipo='ADMIN')
+        self.outro_admin = criar_usuario('adm2', tipo='ADMIN')
+        self.aluno = criar_usuario('alu')
+
+    def _editar(self, ator, alvo, tipo, aprovado=True):
+        self.client.force_login(ator)
+        dados = {'username': alvo.username, 'email': alvo.email, 'tipo': tipo}
+        if aprovado:
+            dados['aprovado'] = 'on'
+        return self.client.post(reverse('editar_usuario', args=[alvo.id]), dados)
+
+    def test_admin_comum_nao_promove_a_admin(self):
+        self._editar(self.admin, self.aluno, 'ADMIN')
+        self.aluno.perfil.refresh_from_db()
+        self.assertEqual(self.aluno.perfil.tipo, 'ALUNO')
+
+    def test_admin_comum_nao_rebaixa_outro_admin(self):
+        self._editar(self.admin, self.outro_admin, 'ALUNO')
+        self.outro_admin.perfil.refresh_from_db()
+        self.assertEqual(self.outro_admin.perfil.tipo, 'ADMIN')
+
+    def test_admin_comum_promove_aluno_a_tecnico(self):
+        self._editar(self.admin, self.aluno, 'TECNICO')
+        self.aluno.perfil.refresh_from_db()
+        self.assertEqual(self.aluno.perfil.tipo, 'TECNICO')
+
+    def test_superusuario_promove_a_admin(self):
+        self._editar(self.root, self.aluno, 'ADMIN')
+        self.aluno.perfil.refresh_from_db()
+        self.assertEqual(self.aluno.perfil.tipo, 'ADMIN')
+
+    def test_rota_antiga_de_permissoes_foi_removida(self):
+        from django.urls import NoReverseMatch
+        with self.assertRaises(NoReverseMatch):
+            reverse('permissoes_acesso')
+
+    def test_aprovar_notifica_usuario(self):
+        from django.core import mail
+        pendente = criar_usuario('pend', aprovado=False, email='pend@example.com')
+        self.client.force_login(self.admin)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(reverse('aprovar_usuario', args=[pendente.perfil.id]))
+        pendente.perfil.refresh_from_db()
+        self.assertTrue(pendente.perfil.aprovado)
+        self.assertEqual(mail.outbox[0].to, ['pend@example.com'])
+
+    def test_revogar_notifica_usuario(self):
+        from django.core import mail
+        alvo = criar_usuario('rev', email='rev@example.com')
+        self.client.force_login(self.admin)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(reverse('revogar_usuario', args=[alvo.perfil.id]))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('suspenso', mail.outbox[0].subject)
+
+
+class NotificacoesTests(TestCase):
+    def setUp(self):
+        from django.core import mail
+        self.mail = mail
+        self.admin = criar_usuario('adm', tipo='ADMIN', email='adm@example.com')
+        self.aluno = criar_usuario('alu', email='alu@example.com')
+
+    def test_cadastro_novo_avisa_administradores(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(reverse('cadastrar'), {
+                'username': 'novato', 'email': 'novato@example.com',
+                'password1': 'Senha-Forte-123', 'password2': 'Senha-Forte-123',
+            })
+        self.assertTrue(User.objects.filter(username='novato').exists())
+        self.assertEqual([m.to for m in self.mail.outbox], [['adm@example.com']])
+
+    def test_evento_desligado_nao_envia_e_registra_no_log(self):
+        from .models import ConfiguracaoNotificacao, LogNotificacao
+        ConfiguracaoNotificacao.objects.create(evento='senha_redefinida', ativo=False)
+        self.client.force_login(self.admin)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(reverse('resetar_senha_usuario', args=[self.aluno.id]), {
+                'new_password1': 'senha-recuperada-999', 'new_password2': 'senha-recuperada-999',
+            })
+        self.assertEqual(len(self.mail.outbox), 0)
+        self.assertEqual(LogNotificacao.objects.get().status, 'DESATIVADO')
+
+    def test_reset_de_senha_envia_alerta_sem_a_senha(self):
+        self.client.force_login(self.admin)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(reverse('resetar_senha_usuario', args=[self.aluno.id]), {
+                'new_password1': 'senha-recuperada-999', 'new_password2': 'senha-recuperada-999',
+            })
+        self.assertEqual(len(self.mail.outbox), 1)
+        self.assertNotIn('senha-recuperada-999', self.mail.outbox[0].body)
+
+    def test_log_nao_guarda_endereco_de_email(self):
+        from .models import LogNotificacao
+        self.client.force_login(self.admin)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(reverse('revogar_usuario', args=[self.aluno.perfil.id]))
+        log = LogNotificacao.objects.get()
+        self.assertEqual(log.status, 'ENVIADO')
+        self.assertNotIn('alu@example.com', f'{log.erro}{log.evento}')
+
+    def test_solicitacao_concluida_avisa_solicitante(self):
+        sol = SolicitacaoInstalacao.objects.create(
+            usuario=self.aluno, software_nome='Docker', justificativa='Preciso para a disciplina X')
+        self.client.force_login(self.admin)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(reverse('atualizar_status_solicitacao', args=[sol.id]), {'novo_status': 'CONCLUIDO'})
+        self.assertEqual(self.mail.outbox[0].to, ['alu@example.com'])
+
+    def test_salvar_preferencias_liga_e_desliga(self):
+        from . import emails
+        self.client.force_login(self.admin)
+        self.client.post(reverse('notificacoes'), {'ativos': ['reserva_confirmada']})
+        self.assertTrue(emails.evento_ativo('reserva_confirmada'))
+        self.assertFalse(emails.evento_ativo('lembrete_reserva'))
+
+    def test_aluno_nao_acessa_notificacoes_nem_email(self):
+        self.client.force_login(self.aluno)
+        for nome in ('notificacoes', 'configurar_email'):
+            self.assertRedirects(self.client.get(reverse(nome)), reverse('home'))
+        self.assertRedirects(self.client.post(reverse('testar_email')), reverse('home'))
+
+
+class ConfiguracaoEmailTests(TestCase):
+    def setUp(self):
+        from django.core import mail
+        self.mail = mail
+        self.admin = criar_usuario('adm', tipo='ADMIN', email='adm@example.com')
+        self.client.force_login(self.admin)
+
+    def _salvar(self, **extra):
+        dados = {'usuario': 'lab@gmail.com', 'senha': 'abcd efgh ijkl mnop', 'nome_remetente': 'Lab',
+                 'host': 'smtp.gmail.com', 'porta': 587, 'usar_tls': 'on'}
+        dados.update(extra)
+        return self.client.post(reverse('configurar_email'), dados)
+
+    def test_senha_e_gravada_cifrada_e_sem_espacos(self):
+        from .models import ConfiguracaoEmail
+        self._salvar()
+        cfg = ConfiguracaoEmail.obter()
+        self.assertNotIn('abcdefghijklmnop', cfg.senha_cifrada)
+        self.assertEqual(cfg.senha, 'abcdefghijklmnop')
+        self.assertTrue(cfg.configurada)
+
+    def test_senha_nunca_volta_na_tela(self):
+        self._salvar()
+        resp = self.client.get(reverse('configurar_email'))
+        self.assertNotContains(resp, 'abcdefghijklmnop')
+        self.assertContains(resp, 'lab@gmail.com')
+
+    def test_senha_em_branco_mantem_a_atual(self):
+        from .models import ConfiguracaoEmail
+        self._salvar()
+        self._salvar(senha='', nome_remetente='Novo nome')
+        cfg = ConfiguracaoEmail.obter()
+        self.assertEqual(cfg.senha, 'abcdefghijklmnop')
+        self.assertEqual(cfg.nome_remetente, 'Novo nome')
+
+    def test_usuario_sem_senha_e_rejeitado(self):
+        from .models import ConfiguracaoEmail
+        self._salvar(senha='')
+        self.assertFalse(ConfiguracaoEmail.obter().usuario)
+
+    def test_remover_senha(self):
+        from .models import ConfiguracaoEmail
+        self._salvar()
+        self._salvar(senha='', usuario='', remover_senha='on')
+        self.assertFalse(ConfiguracaoEmail.obter().configurada)
+
+    def test_troca_da_secret_key_invalida_senha_sem_quebrar(self):
+        from .models import ConfiguracaoEmail
+        self._salvar()
+        with self.settings(SECRET_KEY='outra-chave'):
+            self.assertEqual(ConfiguracaoEmail.obter().senha, '')
+            self.client.force_login(self.admin)  # a troca da chave também invalida a sessão
+            self.assertEqual(self.client.get(reverse('configurar_email')).status_code, 200)
+
+    def test_email_de_teste_vai_para_o_admin(self):
+        resp = self.client.post(reverse('testar_email'))
+        self.assertRedirects(resp, reverse('configurar_email'))
+        self.assertEqual(self.mail.outbox[0].to, ['adm@example.com'])
+
+    def test_teste_sem_email_no_usuario_avisa(self):
+        self.admin.email = ''
+        self.admin.save()
+        self.client.post(reverse('testar_email'))
+        self.assertEqual(len(self.mail.outbox), 0)
+
+
+class LembreteReservaTests(TestCase):
+    def setUp(self):
+        from django.core import mail
+        self.mail = mail
+        lab = Laboratorio.objects.create(nome='Lab L')
+        pc = Computador.objects.create(identificador='L1', laboratorio=lab)
+        self.aluno = criar_usuario('alu', email='alu@example.com')
+        agora = timezone.now()
+        self.proxima = Agendamento.objects.create(
+            tipo_id=id_tipo('Estudo'), usuario=self.aluno, computador=pc,
+            data_hora_inicio=agora + timedelta(minutes=60), data_hora_fim=agora + timedelta(minutes=120))
+        self.distante = Agendamento.objects.create(
+            tipo_id=id_tipo('Estudo'), usuario=self.aluno, computador=pc,
+            data_hora_inicio=agora + timedelta(hours=10), data_hora_fim=agora + timedelta(hours=11))
+
+    def _rodar(self):
+        from django.core.management import call_command
+        with self.captureOnCommitCallbacks(execute=True):
+            call_command('enviar_lembretes', stdout=open('/dev/null', 'w'))
+
+    def test_envia_so_para_reservas_proximas_e_uma_unica_vez(self):
+        self._rodar()
+        self._rodar()
+        self.assertEqual(len(self.mail.outbox), 1)
+        self.proxima.refresh_from_db()
+        self.distante.refresh_from_db()
+        self.assertIsNotNone(self.proxima.lembrete_enviado_em)
+        self.assertIsNone(self.distante.lembrete_enviado_em)
+
+    def test_nao_envia_para_reserva_cancelada(self):
+        self.proxima.cancelar(self.aluno)
+        self._rodar()
+        self.assertEqual(len(self.mail.outbox), 0)
+
+    def test_evento_desligado_nao_marca_nem_envia(self):
+        from .models import ConfiguracaoNotificacao
+        ConfiguracaoNotificacao.objects.create(evento='lembrete_reserva', ativo=False)
+        self._rodar()
+        self.proxima.refresh_from_db()
+        self.assertEqual(len(self.mail.outbox), 0)
+        self.assertIsNone(self.proxima.lembrete_enviado_em)
