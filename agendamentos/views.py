@@ -15,12 +15,13 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from . import emails
+from . import emails, usuarios
 from .decorators import admin_required, aprovado_required, gestor_required
 from .forms import (
     AgendamentoForm,
     AlterarSenhaForm,
     ComputadorForm,
+    ConfiguracaoEmailForm,
     CustomUserCreationForm,
     EditarUsuarioForm,
     LaboratorioForm,
@@ -32,7 +33,10 @@ from .forms import (
 from .models import (
     Agendamento,
     Computador,
+    ConfiguracaoEmail,
+    ConfiguracaoNotificacao,
     Laboratorio,
+    LogNotificacao,
     Perfil,
     Software,
     SolicitacaoInstalacao,
@@ -58,7 +62,8 @@ def cadastrar(request):
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
-            form.save()
+            novo = form.save()
+            emails.notificar_novo_cadastro(novo)
             messages.success(request, 'Conta criada com sucesso! Aguarde a aprovação do administrador para acessar o sistema.')
             return redirect('login')
     else:
@@ -296,6 +301,7 @@ def criar_solicitacao_instalacao(request, computador_id=None):
             if computador:
                 solicitacao.laboratorio = computador.laboratorio
             solicitacao.save()
+            emails.notificar_solicitacao_nova(solicitacao)
             messages.success(
                 request,
                 f'Solicitação enviada para a equipe técnica ({solicitacao.destino_display()}).'
@@ -366,6 +372,7 @@ def atualizar_status_solicitacao(request, solicitacao_id):
         solicitacao.save(update_fields=['status', 'atendido_por', 'data_atualizacao'])
         if novo_status == 'CONCLUIDO':
             aviso = _registrar_instalacao_no_inventario(solicitacao)
+        emails.notificar_solicitacao_atualizada(solicitacao)
 
     messages.success(
         request,
@@ -710,8 +717,7 @@ def liberar_usuarios(request):
 @require_POST
 def aprovar_usuario(request, perfil_id):
     perfil = get_object_or_404(Perfil.objects.select_related('usuario'), id=perfil_id)
-    perfil.aprovado = True
-    perfil.save(update_fields=['aprovado'])
+    usuarios.aplicar(perfil, aprovado=True)
     messages.success(request, f'Usuário {perfil.usuario.username} liberado com sucesso!')
     return redirect('liberar_usuarios')
 
@@ -721,20 +727,12 @@ def aprovar_usuario(request, perfil_id):
 def revogar_usuario(request, perfil_id):
     perfil = get_object_or_404(Perfil.objects.select_related('usuario'), id=perfil_id)
 
-    if perfil.usuario_id == request.user.id:
-        messages.error(request, 'Você não pode revogar o próprio acesso.')
+    erro = usuarios.erro_ao_alterar(request.user, perfil.usuario, aprovado=False)
+    if erro:
+        messages.error(request, erro)
         return redirect('liberar_usuarios')
 
-    if perfil.usuario.is_superuser:
-        messages.error(request, 'O acesso de um superusuário não pode ser revogado por aqui.')
-        return redirect('liberar_usuarios')
-
-    if perfil.tipo == 'ADMIN' and not request.user.is_superuser:
-        messages.error(request, 'Apenas um superusuário pode revogar o acesso de um administrador.')
-        return redirect('liberar_usuarios')
-
-    perfil.aprovado = False
-    perfil.save(update_fields=['aprovado'])
+    usuarios.aplicar(perfil, aprovado=False)
     messages.success(request, f'Acesso de {perfil.usuario.username} revogado.')
     return redirect('liberar_usuarios')
 
@@ -774,16 +772,14 @@ def editar_usuario(request, user_id):
             novo_tipo = form.cleaned_data['tipo']
             aprovado = form.cleaned_data['aprovado']
 
-            # Evita que o administrador logado se rebaixe e perca o acesso.
-            if usuario_obj.id == request.user.id and not request.user.is_superuser:
-                if novo_tipo != 'ADMIN' or not aprovado:
-                    messages.error(request, 'Você não pode remover o próprio acesso de administrador.')
-                    return redirect('editar_usuario', user_id=user_id)
+            erro = usuarios.erro_ao_alterar(request.user, usuario_obj, tipo=novo_tipo, aprovado=aprovado)
+            if erro:
+                messages.error(request, erro)
+                return redirect('editar_usuario', user_id=user_id)
 
-            user_saved = form.save()
-            perfil.tipo = novo_tipo
-            perfil.aprovado = aprovado
-            perfil.save(update_fields=['tipo', 'aprovado'])
+            with transaction.atomic():
+                user_saved = form.save()
+                usuarios.aplicar(perfil, tipo=novo_tipo, aprovado=aprovado)
             messages.success(request, f'Usuário {user_saved.username} atualizado com sucesso!')
             return redirect('gerenciar_usuarios')
     else:
@@ -857,6 +853,7 @@ def resetar_senha_usuario(request, user_id):
         form = ResetarSenhaForm(usuario_obj, request.POST)
         if form.is_valid():
             form.save()
+            emails.notificar_senha_redefinida(usuario_obj)
             messages.success(
                 request,
                 f'Senha de {usuario_obj.username} redefinida com sucesso. '
@@ -869,39 +866,69 @@ def resetar_senha_usuario(request, user_id):
     return render(request, 'agendamentos/resetar_senha.html', {'form': form, 'usuario_obj': usuario_obj})
 
 
+# --- NOTIFICAÇÕES E E-MAIL ---
+
 @admin_required
-def permissoes_acesso(request):
+def notificacoes(request):
     if request.method == 'POST':
-        perfil = get_object_or_404(
-            Perfil.objects.select_related('usuario'), id=request.POST.get('perfil_id')
-        )
-        novo_tipo = request.POST.get('novo_tipo', '')
+        ativos = set(request.POST.getlist('ativos'))
+        for slug in emails.EVENTOS:
+            ConfiguracaoNotificacao.objects.update_or_create(evento=slug, defaults={'ativo': slug in ativos})
+        messages.success(request, 'Preferências de notificação salvas.')
+        return redirect('notificacoes')
 
-        # Sem validação, qualquer valor enviado pelo cliente era gravado no
-        # campo `tipo` — inclusive valores fora de TIPO_CHOICES.
-        if novo_tipo not in dict(Perfil.TIPO_CHOICES):
-            messages.error(request, 'Tipo de perfil inválido.')
-            return redirect('permissoes_acesso')
-
-        if perfil.usuario_id == request.user.id and not request.user.is_superuser:
-            messages.error(request, 'Você não pode alterar o próprio nível de permissão.')
-            return redirect('permissoes_acesso')
-
-        if perfil.usuario.is_superuser and not request.user.is_superuser:
-            messages.error(request, 'Apenas um superusuário pode alterar o perfil de outro superusuário.')
-            return redirect('permissoes_acesso')
-
-        perfil.tipo = novo_tipo
-        perfil.save(update_fields=['tipo'])
-        messages.success(request, f'Permissão de {perfil.usuario.username} atualizada para {perfil.get_tipo_display()}.')
-        return redirect('permissoes_acesso')
-
-    perfis = Perfil.objects.select_related('usuario').order_by('tipo', 'usuario__username')
-    return render(request, 'agendamentos/permissoes_acesso.html', {
-        'perfis': _paginar(request, perfis),
-        'tipo_choices': Perfil.TIPO_CHOICES,
+    eventos = [
+        {'slug': slug, 'ev': ev, 'ativo': emails.evento_ativo(slug)}
+        for slug, ev in emails.EVENTOS.items()
+    ]
+    titulos = {slug: ev.titulo for slug, ev in emails.EVENTOS.items()}
+    logs = _paginar(request, LogNotificacao.objects.select_related('usuario'))
+    for item in logs:
+        item.titulo_evento = titulos.get(item.evento, item.evento)
+    return render(request, 'agendamentos/notificacoes.html', {
+        'eventos': eventos,
+        'logs': logs,
+        'email_configurado': ConfiguracaoEmail.obter().configurada or bool(settings.EMAIL_HOST_USER),
+        'lembrete_horas': settings.AGENDAMENTO_LEMBRETE_HORAS,
     })
 
+
+@admin_required
+def configurar_email(request):
+    cfg = ConfiguracaoEmail.obter()
+    if request.method == 'POST':
+        form = ConfiguracaoEmailForm(request.POST, instance=cfg)
+        if form.is_valid():
+            cfg = form.save(commit=False)
+            if form.cleaned_data['remover_senha']:
+                cfg.definir_senha('')
+            elif form.cleaned_data['senha']:
+                cfg.definir_senha(form.cleaned_data['senha'])
+            cfg.atualizado_por = request.user
+            cfg.save()
+            messages.success(request, 'Configuração de e-mail salva. Use "Enviar e-mail de teste" para validar.')
+            return redirect('configurar_email')
+    else:
+        form = ConfiguracaoEmailForm(instance=cfg)
+    return render(request, 'agendamentos/configurar_email.html', {
+        'form': form,
+        'cfg': cfg,
+        'usa_env': not cfg.configurada and bool(settings.EMAIL_HOST_USER),
+    })
+
+
+@admin_required
+@require_POST
+def testar_email(request):
+    if not request.user.email:
+        messages.error(request, 'Seu usuário não tem e-mail cadastrado para receber o teste.')
+        return redirect('configurar_email')
+    ok, erro = emails.enviar_teste(request.user.email)
+    if ok:
+        messages.success(request, 'E-mail de teste enviado para o seu endereço. Confira a caixa de entrada.')
+    else:
+        messages.error(request, f'Falha ao enviar ({erro}). Confira a conta, a senha de app e a verificação em duas etapas.')
+    return redirect('configurar_email')
 
 
 # --- TIPOS DE AGENDAMENTO (regras de preço) ---

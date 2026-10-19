@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 
 from .models import (
-    Agendamento, Computador, Laboratorio, Perfil, Software, SolicitacaoInstalacao, TipoAgendamento,
+    Agendamento, Computador, ConfiguracaoEmail, Laboratorio, Perfil, Software, SolicitacaoInstalacao, TipoAgendamento,
 )
 
 
@@ -311,3 +311,36 @@ class TipoAgendamentoForm(forms.ModelForm):
         if dur is not None and (dur < settings.AGENDAMENTO_DURACAO_MINIMA_MIN or dur % bloco):
             self.add_error('duracao_maxima_min', f'Use múltiplos de {bloco} minutos, no mínimo {settings.AGENDAMENTO_DURACAO_MINIMA_MIN}.')
         return cleaned
+
+
+class ConfiguracaoEmailForm(forms.ModelForm):
+    senha = forms.CharField(
+        required=False,
+        label='Senha de app do Gmail',
+        widget=forms.PasswordInput(render_value=False, attrs={'autocomplete': 'new-password'}),
+        help_text='Deixe em branco para manter a senha atual. Ela é guardada cifrada e nunca é exibida.',
+    )
+    remover_senha = forms.BooleanField(required=False, label='Remover a senha salva (voltar a usar o .env)')
+
+    class Meta:
+        model = ConfiguracaoEmail
+        fields = ['usuario', 'nome_remetente', 'host', 'porta', 'usar_tls']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _com_classe_form_control(self.fields)
+
+    def clean_senha(self):
+        # O Google mostra a senha de app em grupos separados por espaço.
+        return self.cleaned_data.get('senha', '').replace(' ', '').strip()
+
+    def clean(self):
+        dados = super().clean()
+        tem_senha = bool(dados.get('senha')) or (
+            bool(self.instance.senha_cifrada) and not dados.get('remover_senha')
+        )
+        if tem_senha and not dados.get('usuario'):
+            self.add_error('usuario', 'Informe a conta Gmail que enviará os e-mails.')
+        if dados.get('usuario') and not tem_senha:
+            self.add_error('senha', 'Informe a senha de app desta conta.')
+        return dados

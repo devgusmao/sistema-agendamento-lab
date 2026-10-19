@@ -64,7 +64,10 @@
                         <a href="{% url 'gerenciar_usuarios' %}" {% if request.resolver_match.url_name == 'gerenciar_usuarios' %}class="active"{% endif %}>👥 Gerenciar Usuários</a>
                     </li>
                     <li>
-                        <a href="{% url 'permissoes_acesso' %}" {% if request.resolver_match.url_name == 'permissoes_acesso' %}class="active"{% endif %}>🛡️ Permissões de Acesso</a>
+                        <a href="{% url 'notificacoes' %}" {% if request.resolver_match.url_name == 'notificacoes' %}class="active"{% endif %}>🔔 Notificações</a>
+                    </li>
+                    <li>
+                        <a href="{% url 'configurar_email' %}" {% if request.resolver_match.url_name == 'configurar_email' %}class="active"{% endif %}>✉️ E-mail (Gmail)</a>
                     </li>
                 {% endif %}
             {% endif %}
