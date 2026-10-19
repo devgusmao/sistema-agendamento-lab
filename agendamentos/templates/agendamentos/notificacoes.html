@@ -1,0 +1,96 @@
+{% extends 'agendamentos/base.html' %}
+
+{% block title %}Notificações{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .btn-link { background-color: var(--primary-color); color: white; padding: 0.7rem 1.2rem; border-radius: 8px; font-weight: 600; font-size: 0.9rem; }
+    .btn-link:hover { background-color: var(--primary-hover); text-decoration: none; }
+    .table-card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--panel-border); overflow: hidden; margin-bottom: 1.5rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 0.9rem 1.1rem; text-align: left; border-bottom: 1px solid var(--panel-border); font-size: 0.88rem; vertical-align: top; }
+    th { background-color: #f8fafc; font-weight: 600; color: #475569; }
+    .desc { color: var(--muted-text); font-size: 0.82rem; display: block; margin-top: 0.2rem; }
+    .toggle { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 600; }
+    .toggle input { transform: scale(1.2); }
+    .actions { padding: 1rem 1.1rem; display: flex; justify-content: flex-end; }
+    .btn-salvar { background-color: var(--primary-color); color: white; border: none; padding: 0.6rem 1.25rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .btn-salvar:hover { background-color: var(--primary-hover); }
+    .badge { padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+    .st-ENVIADO { background: #dcfce7; color: #166534; }
+    .st-FALHA { background: #fee2e2; color: #991b1b; }
+    .st-DESATIVADO, .st-SEM_EMAIL { background: #e2e8f0; color: #475569; }
+    h2 { font-size: 1.1rem; margin: 1.5rem 0 0.75rem; color: #0f172a; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Notificações por e-mail</h1>
+        <p>Tudo o que o sistema avisa por e-mail. Desmarque um evento para parar de enviá-lo.</p>
+    </div>
+    <a href="{% url 'configurar_email' %}" class="btn-link">✉️ Configurar Gmail</a>
+</div>
+
+{% if not email_configurado %}
+    <div class="alert alert-warning">
+        <span>Nenhuma conta de e-mail configurada: as mensagens aparecem só no console do servidor.
+        <a href="{% url 'configurar_email' %}">Configurar agora</a>.</span>
+    </div>
+{% endif %}
+
+<form method="post" class="table-card">
+    {% csrf_token %}
+    <table>
+        <thead>
+            <tr><th>Enviar</th><th>Evento</th><th>Quem recebe</th></tr>
+        </thead>
+        <tbody>
+            {% for item in eventos %}
+                <tr>
+                    <td>
+                        <label class="toggle">
+                            <input type="checkbox" name="ativos" value="{{ item.slug }}" {% if item.ativo %}checked{% endif %}>
+                            {% if item.ativo %}Ativo{% else %}Desligado{% endif %}
+                        </label>
+                    </td>
+                    <td>
+                        <strong>{{ item.ev.titulo }}</strong>
+                        <span class="desc">{{ item.ev.descricao }}{% if item.slug == 'lembrete_reserva' %} (Atual: {{ lembrete_horas }} h antes.){% endif %}</span>
+                    </td>
+                    <td>{{ item.ev.destinatario }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="actions"><button type="submit" class="btn-salvar">Salvar preferências</button></div>
+</form>
+
+<h2>Últimos envios</h2>
+<p class="desc">O histórico guarda o usuário e o resultado, nunca o endereço de e-mail.</p>
+<div class="table-card">
+    {% if logs %}
+        <table>
+            <thead><tr><th>Quando</th><th>Evento</th><th>Usuário</th><th>Resultado</th></tr></thead>
+            <tbody>
+                {% for l in logs %}
+                    <tr>
+                        <td>{{ l.criado_em|date:"d/m/Y H:i" }}</td>
+                        <td>{{ l.titulo_evento }}</td>
+                        <td>{{ l.usuario.username|default:"(removido)" }}</td>
+                        <td>
+                            <span class="badge st-{{ l.status }}">{{ l.get_status_display }}</span>
+                            {% if l.erro %}<span class="desc">{{ l.erro }}</span>{% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% include 'agendamentos/_paginacao.html' with page_obj=logs %}
+    {% else %}
+        <p class="empty-state">Nenhum envio registrado ainda.</p>
+    {% endif %}
+</div>
+{% endblock %}

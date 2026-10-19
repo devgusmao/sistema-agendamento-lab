@@ -4,3 +4,4 @@ gunicorn>=21.2.0
 python-decouple>=3.8
 whitenoise>=6.5
 django-axes>=6.4,<7
+cryptography>=42
