@@ -227,7 +227,7 @@ sistema-agendamento-lab/
 
 ## 🧭 Próximos passos
 
-- [ ] Limite de tentativas de login (proteção contra força bruta).
+- [x] Limite de tentativas de login (django-axes: 5 falhas → bloqueio de 15 min por usuário+IP; ajustável no `.env`).
 - [ ] Notificação por e-mail na aprovação de cadastro e na conclusão de solicitações (reservas já notificam).
 - [ ] Registro de pagamento, multa de cancelamento e estorno.
 - [ ] Check-in/check-out e controle de não comparecimento.

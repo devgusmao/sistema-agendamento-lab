@@ -948,3 +948,33 @@ class TipoAgendamentoPrecoTests(TestCase):
         self.client.force_login(self.aluno)
         resp = self.client.get(reverse('criar_agendamento', args=[self.pc.id]))
         self.assertContains(resp, 'taxas-data')
+
+
+class LimiteTentativasLoginTests(TestCase):
+    """Etapa 7: django-axes bloqueia força bruta no login."""
+
+    def setUp(self):
+        self.aluno = criar_usuario('aluno_axes')
+        self.url = reverse('login')
+
+    def tentar(self, senha):
+        return self.client.post(self.url, {'username': 'aluno_axes', 'password': senha})
+
+    def test_bloqueia_apos_limite_de_falhas(self):
+        for _ in range(5):
+            self.tentar('errada')
+        resp = self.tentar('errada')
+        self.assertEqual(resp.status_code, 429)
+        self.assertTemplateUsed(resp, 'agendamentos/bloqueado.html')
+
+    def test_senha_correta_tambem_e_bloqueada_durante_o_bloqueio(self):
+        for _ in range(5):
+            self.tentar('errada')
+        resp = self.tentar('senha-de-teste-123')
+        self.assertEqual(resp.status_code, 429)
+
+    def test_login_correto_antes_do_limite_funciona(self):
+        for _ in range(4):
+            self.tentar('errada')
+        resp = self.tentar('senha-de-teste-123')
+        self.assertEqual(resp.status_code, 302)

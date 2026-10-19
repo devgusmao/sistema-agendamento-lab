@@ -1,0 +1,27 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acesso bloqueado - Agendamento de Laboratórios</title>
+    <link rel="stylesheet" href="{% static 'agendamentos/css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'agendamentos/css/auth.css' %}">
+</head>
+<body class="auth-page">
+    <div class="auth-shell">
+        <div class="auth-card">
+            <div class="auth-brand">🔒</div>
+            <div class="auth-header">
+                <p class="eyebrow">Acesso bloqueado</p>
+                <h1>Muitas tentativas</h1>
+            </div>
+            <div class="form-alert form-alert-error">
+                Foram feitas muitas tentativas de login sem sucesso. Aguarde alguns minutos e tente novamente.
+                Se esqueceu a senha, procure a gestão do laboratório.
+            </div>
+            <a href="{% url 'login' %}" class="auth-button">Voltar ao login</a>
+        </div>
+    </div>
+</body>
+</html>
