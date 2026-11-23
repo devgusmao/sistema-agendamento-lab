@@ -9,13 +9,12 @@
     <link rel="stylesheet" href="{% static 'agendamentos/css/auth.css' %}">
 </head>
 <body class="auth-page">
+    {% include 'agendamentos/_auth_hero.html' %}
+    <main class="auth-main">
     <div class="auth-shell">
         <div class="auth-card">
-            <div class="auth-brand">🖥️</div>
-
             <div class="auth-header">
-                <p class="eyebrow">Acesso</p>
-                <h1>LabManager</h1>
+                <h1>Bem-vindo(a)</h1>
             </div>
 
             {% if messages %}
@@ -49,5 +48,6 @@
             </div>
         </div>
     </div>
+    </main>
 </body>
 </html>

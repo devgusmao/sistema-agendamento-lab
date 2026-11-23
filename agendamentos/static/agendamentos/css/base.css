@@ -1,4 +1,10 @@
 /* Base layout shared across authenticated pages */
+
+/* --- Menu lateral: expandido (padrão) ou recolhido só com ícones (html.sb-collapsed) --- */
+html.sb-collapsed {
+    --sidebar-width: 76px;
+}
+
 .sidebar {
     position: fixed;
     inset: 0 auto 0 0;
@@ -7,112 +13,324 @@
     color: #f8fafc;
     display: flex;
     flex-direction: column;
-    box-shadow: 10px 0 30px rgba(15, 23, 42, 0.20);
     z-index: 10;
+    transition: width 0.2s ease;
 }
 
-.sidebar-brand {
-    padding: 1.5rem 1.25rem;
-    font-size: 1.15rem;
-    font-weight: 800;
-    letter-spacing: 0.02em;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.18);
-    color: #7dd3fc;
+.sb-ico {
+    width: 20px;
+    height: 20px;
+    flex: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.sb-brand {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    padding: 1.25rem 1.1rem 1rem;
 }
 
-.sidebar-brand::before {
-    content: '🖥️';
-    font-size: 1.3rem;
+.sb-logo {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    flex: none;
+    border-radius: 10px;
+    background: #ffffff;
+    color: var(--sidebar-bg);
+    font-size: 1.25rem;
+    font-weight: 800;
 }
 
-.sidebar-menu {
-    list-style: none;
-    padding: 1rem 0;
-    margin: 0;
+.sb-brand-text {
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+/* Botão redondo na borda para recolher/expandir */
+.sb-toggle {
+    position: absolute;
+    top: 50%;
+    right: -14px;
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--panel-border);
+    border-radius: 50%;
+    background: #ffffff;
+    color: var(--sidebar-bg);
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.25);
+    z-index: 11;
+}
+
+.sb-toggle .sb-ico {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.2s ease;
+}
+
+.sb-nav {
     flex: 1;
     overflow-y: auto;
+    padding: 0.5rem 0;
 }
 
-.sidebar-menu .menu-title {
-    padding: 0.9rem 1.25rem 0.4rem;
-    font-size: 0.72rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #94a3b8;
+.sb-item {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    width: calc(100% - 1.5rem);
+    margin: 2px 0.75rem;
+    padding: 0.7rem 0.85rem;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: #cbd5e1;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.sb-item:hover {
+    background: var(--sidebar-hover);
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.sb-item.active {
+    background: #ffffff;
+    color: var(--sidebar-bg);
+}
+
+.sb-label {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sb-chev {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.2s ease;
+}
+
+.sb-group.open > .sb-group-toggle .sb-chev {
+    transform: rotate(180deg);
+}
+
+/* Submenu em linha (menu expandido) */
+.sb-sub {
+    display: none;
+    padding: 0.1rem 0 0.4rem;
+}
+
+.sb-group.open .sb-sub {
+    display: block;
+}
+
+.sb-sub-title {
+    display: none;
+}
+
+.sb-sub a {
+    display: block;
+    margin: 0 0.75rem;
+    padding: 0.5rem 0.85rem 0.5rem 3.05rem;
+    border-radius: 8px;
+    color: #cbd5e1;
+    font-size: 0.9rem;
+    text-decoration: none;
+}
+
+.sb-sub a:hover {
+    background: var(--sidebar-hover);
+    color: #ffffff;
+}
+
+.sb-sub a.active {
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
     font-weight: 700;
 }
 
-.sidebar-menu a {
+/* Cartão do usuário */
+.sb-user {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.8rem 1.25rem;
-    color: #cbd5e1;
-    text-decoration: none;
-    transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    gap: 0.7rem;
+    margin: 0.75rem;
+    padding: 0.7rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
 }
 
-.sidebar-menu a:hover,
-.sidebar-menu a.active {
-    background: var(--sidebar-hover);
+.sb-avatar {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--primary-color);
     color: #ffffff;
-    border-left: 4px solid var(--primary-color);
-    padding-left: 1.1rem;
+    font-weight: 800;
 }
 
-.sidebar-footer {
-    padding: 1rem 1.25rem 1.25rem;
-    border-top: 1px solid rgba(148, 163, 184, 0.18);
-    background: rgba(15, 23, 42, 0.7);
-}
-
-.user-profile {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-}
-
-.user-details {
+.sb-user-info {
+    flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
 }
 
-.user-name {
-    font-size: 0.92rem;
-    font-weight: 700;
-    color: #f8fafc;
-}
-
-.user-role {
-    font-size: 0.76rem;
+.sb-user-role {
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     color: #94a3b8;
 }
 
-.btn-logout {
-    background: #ef4444;
-    color: #ffffff;
+.sb-user-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #f8fafc;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sb-logout {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: 0;
     border-radius: 8px;
     padding: 0.5rem 0.85rem;
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
     font-weight: 700;
     cursor: pointer;
-    transition: background-color 0.2s ease, transform 0.2s ease;
+    transition: background-color 0.2s ease;
 }
 
-.btn-logout:hover {
-    background: #dc2626;
-    transform: translateY(-1px);
+.sb-logout:hover {
+    background: #ef4444;
+}
+
+.sb-out-ico {
+    display: none;
 }
 
 .logout-form {
     margin: 0;
 }
 
+/* Recolhido (somente telas largas): ícones e painel flutuante nos grupos */
+@media (min-width: 769px) {
+    .sb-collapsed .sb-toggle .sb-ico {
+        transform: rotate(180deg);
+    }
+
+    .sb-collapsed .sb-brand {
+        justify-content: center;
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .sb-collapsed .sb-brand-text,
+    .sb-collapsed .sb-label,
+    .sb-collapsed .sb-chev,
+    .sb-collapsed .sb-user-info,
+    .sb-collapsed .sb-out-text {
+        display: none;
+    }
+
+    .sb-collapsed .sb-item {
+        justify-content: center;
+        padding: 0.8rem 0;
+    }
+
+    .sb-collapsed .sb-group.has-active > .sb-group-toggle {
+        background: #ffffff;
+        color: var(--sidebar-bg);
+    }
+
+    .sb-collapsed .sb-user {
+        flex-direction: column;
+        padding: 0.6rem 0.3rem;
+    }
+
+    .sb-collapsed .sb-out-ico {
+        display: block;
+    }
+
+    .sb-collapsed .sb-logout {
+        padding: 0.4rem;
+    }
+
+    .sb-collapsed .sb-group.open .sb-sub {
+        display: none;
+    }
+
+    .sb-collapsed .sb-group:hover .sb-sub,
+    .sb-collapsed .sb-group:focus-within .sb-sub {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.15rem 0.5rem;
+        position: fixed;
+        left: var(--sidebar-width);
+        min-width: 360px;
+        padding: 0.8rem;
+        border-radius: 12px;
+        background: #ffffff;
+        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.25);
+        z-index: 20;
+    }
+
+    .sb-collapsed .sb-sub-title {
+        display: block;
+        grid-column: 1 / -1;
+        padding: 0 0.5rem 0.4rem;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted-text);
+    }
+
+    .sb-collapsed .sb-sub a {
+        margin: 0;
+        padding: 0.5rem;
+        color: var(--text-color);
+    }
+
+    .sb-collapsed .sb-sub a:hover {
+        background: #f1f5f9;
+        color: var(--text-color);
+    }
+
+    .sb-collapsed .sb-sub a.active {
+        background: var(--primary-soft);
+        color: var(--primary-color-dark);
+    }
+}
+
 .main-content {
+    transition: margin-left 0.2s ease, width 0.2s ease;
     margin-left: var(--sidebar-width);
     flex: 1;
     padding: 2rem;
@@ -242,10 +460,22 @@
 }
 
 @media (max-width: 768px) {
+    html.sb-collapsed {
+        --sidebar-width: 260px;
+    }
+
     .sidebar {
         position: static;
         width: 100%;
         height: auto;
+    }
+
+    .sb-toggle {
+        display: none;
+    }
+
+    .sb-nav {
+        max-height: 60vh;
     }
 
     .main-content {

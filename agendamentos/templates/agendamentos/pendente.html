@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="{% static 'agendamentos/css/styles.css' %}">
     <link rel="stylesheet" href="{% static 'agendamentos/css/auth.css' %}">
     <style>
-        .pendente-shell { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
+        .pendente-shell { display: flex; align-items: center; justify-content: center; }
         .pendente-card {
             background: #fff; padding: 2.5rem 2rem; border-radius: 16px;
             box-shadow: var(--shadow-soft); text-align: center; max-width: 460px;
@@ -23,7 +23,9 @@
         .btn-logout:hover { background-color: #dc2626; }
     </style>
 </head>
-<body>
+<body class="auth-page">
+    {% include 'agendamentos/_auth_hero.html' %}
+    <main class="auth-main">
     <div class="pendente-shell">
         <div class="pendente-card">
             <div style="font-size: 2.5rem;">⏳</div>
@@ -39,5 +41,6 @@
             </form>
         </div>
     </div>
+    </main>
 </body>
 </html>
