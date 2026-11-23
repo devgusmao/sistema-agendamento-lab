@@ -71,6 +71,21 @@ A antecedência é `AGENDAMENTO_LEMBRETE_HORAS` (padrão 2). As regras de agenda
 (duração, blocos, limite de reservas, horário e multa de cancelamento) também são ajustáveis pelo `.env`;
 veja o `.env.example`.
 
+### Cadastro com confirmação de e-mail e recuperação de senha
+
+- **Cadastro:** o usuário recebe um link de confirmação (válido por 24 h). Só depois de
+  confirmar, os administradores são avisados. O acesso continua exigindo a aprovação de um
+  administrador, e a tela de aprovação mostra se o e-mail já foi confirmado.
+- **Esqueci minha senha:** o link enviado por e-mail vale por 30 min e só pode ser usado uma
+  vez. O usuário cria a nova senha sozinho, com as regras de senha do sistema. Quem já está
+  aprovado volta a entrar sem nova aprovação; conta nova continua aguardando o administrador.
+- **Segurança:** a resposta é a mesma exista ou não o e-mail; há limite de pedidos por usuário
+  (3/h) e por IP (10/h); o token sai da URL logo no primeiro acesso; o link usa o `SITE_URL`
+  (não o cabeçalho `Host`); as sessões abertas caem ao trocar a senha; o login travado por
+  tentativas é liberado; e o dono da conta recebe um alerta de senha alterada.
+- Configure `SITE_URL` (domínio com HTTPS em produção). Validades e limites no `.env.example`.
+- Sem e-mail configurado (Gmail), os links só aparecem no log e ninguém consegue confirmar.
+
 ### Comandos úteis
 
 ```bash

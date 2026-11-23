@@ -1,0 +1,53 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
+    <title>Nova senha - LabManager</title>
+    <link rel="stylesheet" href="{% static 'agendamentos/css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'agendamentos/css/auth.css' %}">
+</head>
+<body class="auth-page">
+    {% include 'agendamentos/_auth_hero.html' %}
+    <main class="auth-main">
+    <div class="auth-shell">
+        <div class="auth-card">
+            {% if valido %}
+                <div class="auth-header">
+                    <h1>Criar nova senha</h1>
+                </div>
+                <form method="post" class="form-stack">
+                    {% csrf_token %}
+                    {% if form.errors %}
+                        <ul class="errorlist">
+                            {% for field in form %}{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}{% endfor %}
+                            {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+                        </ul>
+                    {% endif %}
+                    <div class="field">
+                        <label for="id_new_password1">Nova senha</label>
+                        {{ form.new_password1 }}
+                        <span class="form-help">Mínimo de 8 caracteres, sem ser só números nem uma senha comum.</span>
+                    </div>
+                    <div class="field">
+                        <label for="id_new_password2">Confirme a nova senha</label>
+                        {{ form.new_password2 }}
+                    </div>
+                    <button type="submit" class="auth-button">Salvar nova senha</button>
+                </form>
+            {% else %}
+                <div class="auth-header">
+                    <h1>Link inválido ou expirado</h1>
+                </div>
+                <div class="form-alert form-alert-error">
+                    Este link de recuperação não vale mais. Ele expira em pouco tempo e só pode ser usado uma vez.
+                </div>
+                <a href="{% url 'esqueci_senha' %}" class="auth-button">Pedir um novo link</a>
+            {% endif %}
+        </div>
+    </div>
+    </main>
+</body>
+</html>

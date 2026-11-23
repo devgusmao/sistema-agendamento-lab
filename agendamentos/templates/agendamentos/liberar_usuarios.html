@@ -50,7 +50,14 @@
                 {% for p in pendentes %}
                     <tr>
                         <td><strong>{{ p.usuario.username }}</strong></td>
-                        <td>{{ p.usuario.email|default:"Sem e-mail cadastrado" }}</td>
+                        <td>
+                            {{ p.usuario.email|default:"Sem e-mail cadastrado" }}
+                            {% if p.email_verificado %}
+                                <span style="display:block;font-size:0.76rem;color:var(--success-text);">✔ e-mail confirmado</span>
+                            {% else %}
+                                <span style="display:block;font-size:0.76rem;color:var(--warning-text);">⚠ e-mail ainda não confirmado (o usuário só entra depois de confirmar)</span>
+                            {% endif %}
+                        </td>
                         <td>{{ p.usuario.date_joined|date:"d/m/Y H:i" }}</td>
                         <td>
                             <form method="post" action="{% url 'aprovar_usuario' p.id %}" class="btn-inline-form">

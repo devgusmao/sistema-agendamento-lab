@@ -17,6 +17,14 @@ class Perfil(models.Model):
     usuario = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
     tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, default='ALUNO')
     aprovado = models.BooleanField(default=False)
+    # True por padrão: contas criadas pelo admin/CLI e as já existentes não precisam confirmar.
+    # O cadastro público grava False e só vira True pelo link enviado ao e-mail.
+    email_verificado = models.BooleanField(default=True)
+
+    @property
+    def liberado(self):
+        """Pode usar o sistema: aprovada por um administrador e com e-mail confirmado."""
+        return self.aprovado and self.email_verificado
 
     def __str__(self):
         return f"{self.usuario.username} - {self.get_tipo_display()}"
@@ -391,7 +399,7 @@ class LogNotificacao(models.Model):
 def _tipo_aprovado(user):
     """Tipo do perfil, mas só se a conta estiver liberada (None caso contrário)."""
     perfil = getattr(user, 'perfil', None)
-    if perfil is None or not perfil.aprovado:
+    if perfil is None or not perfil.liberado:
         return None
     return perfil.tipo
 
@@ -417,4 +425,14 @@ def perfil_aprovado(user):
     """Usuário liberado para usar o sistema."""
     if not user.is_authenticated:
         return False
-    return user.is_superuser or getattr(getattr(user, 'perfil', None), 'aprovado', False)
+    return user.is_superuser or getattr(getattr(user, 'perfil', None), 'liberado', False)
+
+
+class LimiteSolicitacao(models.Model):
+    """Registro de pedidos sensíveis (recuperar senha, reenviar confirmação) para limitar abusos."""
+
+    chave = models.CharField(max_length=120)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['chave', 'criado_em'])]

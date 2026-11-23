@@ -21,6 +21,8 @@
             margin-top: 1.25rem; font-weight: 700;
         }
         .btn-logout:hover { background-color: #dc2626; }
+        .btn-reenviar { background-color: var(--auth-accent); color: white; border: none; padding: 0.7rem 1.4rem; border-radius: 8px; cursor: pointer; margin-top: 0.5rem; font-weight: 700; }
+        .btn-reenviar:hover { background-color: var(--auth-accent-dark); }
     </style>
 </head>
 <body class="auth-page">
@@ -28,13 +30,26 @@
     <main class="auth-main">
     <div class="pendente-shell">
         <div class="pendente-card">
-            <div style="font-size: 2.5rem;">⏳</div>
-            <h2>Cadastro pendente de liberação</h2>
-            <p>
-                Olá, <strong>{{ user.username }}</strong>. Sua conta foi criada, mas precisa da aprovação
-                de um administrador antes de você conseguir reservar máquinas ou solicitar softwares.
-            </p>
-            <p><small>Procure o responsável pelo laboratório para liberar o acesso.</small></p>
+            {% if not user.perfil.email_verificado %}
+                <div style="font-size: 2.5rem;">✉️</div>
+                <h2>Confirme o seu e-mail</h2>
+                <p>
+                    Olá, <strong>{{ user.username }}</strong>. Enviamos um link de confirmação para o e-mail do seu cadastro.
+                    Abra a mensagem e clique no botão para continuar. Depois, um administrador precisa liberar o seu acesso.
+                </p>
+                <form action="{% url 'reenviar_confirmacao' %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-reenviar">Reenviar e-mail de confirmação</button>
+                </form>
+            {% else %}
+                <div style="font-size: 2.5rem;">⏳</div>
+                <h2>Cadastro pendente de liberação</h2>
+                <p>
+                    Olá, <strong>{{ user.username }}</strong>. Sua conta foi criada, mas precisa da aprovação
+                    de um administrador antes de você conseguir reservar máquinas ou solicitar softwares.
+                </p>
+                <p><small>Procure o responsável pelo laboratório para liberar o acesso.</small></p>
+            {% endif %}
             <form action="{% url 'logout' %}" method="post">
                 {% csrf_token %}
                 <button type="submit" class="btn-logout">Sair do Sistema</button>

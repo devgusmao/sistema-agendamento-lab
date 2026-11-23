@@ -33,6 +33,23 @@ class CustomUserCreationForm(UserCreationForm):
         return email
 
 
+class EsqueciSenhaForm(forms.Form):
+    email = forms.EmailField(label='E-mail cadastrado', max_length=254)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _com_classe_form_control(self.fields)
+        self.fields['email'].widget.attrs.update({'autocomplete': 'email', 'autofocus': True})
+
+
+class NovaSenhaForm(SetPasswordForm):
+    """Nova senha criada pelo próprio usuário pelo link do e-mail (segue os validadores de senha)."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _com_classe_form_control(self.fields)
+
+
 class LaboratorioForm(forms.ModelForm):
     class Meta:
         model = Laboratorio

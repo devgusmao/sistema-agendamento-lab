@@ -1,0 +1,39 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
+    <title>Confirmação de e-mail - LabManager</title>
+    <link rel="stylesheet" href="{% static 'agendamentos/css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'agendamentos/css/auth.css' %}">
+</head>
+<body class="auth-page">
+    {% include 'agendamentos/_auth_hero.html' %}
+    <main class="auth-main">
+    <div class="auth-shell">
+        <div class="auth-card">
+            {% if valido %}
+                <div class="auth-header">
+                    <h1>E-mail confirmado</h1>
+                </div>
+                <div class="form-alert form-alert-success">
+                    Obrigado! Seu e-mail foi confirmado.
+                    {% if aprovado %}Você já pode entrar no sistema.{% else %}Agora é só aguardar um administrador liberar o seu acesso.{% endif %}
+                </div>
+                <a href="{% url 'login' %}" class="auth-button">Ir para o login</a>
+            {% else %}
+                <div class="auth-header">
+                    <h1>Link inválido ou expirado</h1>
+                </div>
+                <div class="form-alert form-alert-error">
+                    Não foi possível confirmar o e-mail. O link pode ter expirado. Entre com a sua conta para pedir um novo.
+                </div>
+                <a href="{% url 'login' %}" class="auth-button">Ir para o login</a>
+            {% endif %}
+        </div>
+    </div>
+    </main>
+</body>
+</html>

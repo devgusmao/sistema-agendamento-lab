@@ -1,0 +1,43 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
+    <title>Esqueci minha senha - LabManager</title>
+    <link rel="stylesheet" href="{% static 'agendamentos/css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'agendamentos/css/auth.css' %}">
+</head>
+<body class="auth-page">
+    {% include 'agendamentos/_auth_hero.html' %}
+    <main class="auth-main">
+    <div class="auth-shell">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>Esqueci minha senha</h1>
+            </div>
+            <p class="form-help" style="text-align:center;margin:-0.5rem 0 1.25rem;">
+                Informe o e-mail do seu cadastro. Se ele existir, enviaremos um link para você criar uma nova senha.
+            </p>
+
+            <form method="post" class="form-stack">
+                {% csrf_token %}
+                {% if form.errors %}
+                    <div class="form-alert form-alert-error">Informe um e-mail válido.</div>
+                {% endif %}
+                <div class="field">
+                    <label for="id_email">E-mail cadastrado</label>
+                    {{ form.email }}
+                </div>
+                <button type="submit" class="auth-button">Enviar link</button>
+            </form>
+
+            <div class="auth-footer">
+                <a href="{% url 'login' %}">Voltar ao login</a>
+            </div>
+        </div>
+    </div>
+    </main>
+</body>
+</html>

@@ -32,6 +32,8 @@ código.
 | Administrador não consegue se rebaixar nem se excluir (anti-lockout) | `agendamentos/views.py` |
 | Cancelamento, pagamento e estorno relêem a reserva sob `select_for_update` (sem sobrescrita em operações simultâneas) | `agendamentos/servicos/` |
 | Registro de pagamento e estorno só por administrador, via `POST` + CSRF | `agendamentos/views.py` |
+| Confirmação de e-mail (token assinado, 24 h) e recuperação de senha (token de uso único, 30 min), com resposta igual exista ou não a conta e limite por usuário e por IP | `agendamentos/servicos/contas.py`, `limites.py` |
+| Links de e-mail montados com `SITE_URL`, não com o cabeçalho `Host`; token tirado da URL após o primeiro acesso; páginas sem cache | `agendamentos/views_conta.py` |
 | Reserva criada sob `select_for_update` (evita corrida de sobreposição) | `agendamentos/views.py` |
 | `.env` fora da imagem Docker | `.dockerignore` |
 
@@ -51,8 +53,10 @@ código.
 Itens identificados e ainda **não** implementados:
 
 - **Enumeração de e-mail no cadastro.** A mensagem "este e-mail já está
-  cadastrado" confirma a existência de uma conta. É um requisito funcional da
-  tela, mas vale avaliar a troca por confirmação por e-mail.
+  cadastrado" confirma a existência de uma conta. A recuperação de senha já
+  responde sempre igual; o cadastro ainda precisa ser alinhado.
+- **IP do cliente.** O limite por IP usa `REMOTE_ADDR`; atrás de proxy reverso é
+  preciso repassar o IP real (como no django-axes).
 - **Sem registro de auditoria.** Cancelamentos e mudanças de permissão gravam
   autor e data no próprio registro, mas não há trilha de auditoria completa.
 

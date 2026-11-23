@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import views
+from . import views, views_conta
 
 urlpatterns = [
     # --- PÁGINAS PRINCIPAIS E AUTENTICAÇÃO ---
@@ -13,6 +13,10 @@ urlpatterns = [
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
     path('cadastrar/', views.cadastrar, name='cadastrar'),
     path('conta/alterar-senha/', views.alterar_senha, name='alterar_senha'),
+    path('conta/esqueci-senha/', views_conta.esqueci_senha, name='esqueci_senha'),
+    path('conta/redefinir-senha/<uidb64>/<token>/', views_conta.redefinir_senha, name='redefinir_senha'),
+    path('conta/confirmar-email/<token>/', views_conta.confirmar_email, name='confirmar_email'),
+    path('conta/reenviar-confirmacao/', views_conta.reenviar_confirmacao, name='reenviar_confirmacao'),
 
     # --- GESTÃO DE LABORATÓRIOS ---
     path('laboratorios/', views.listar_laboratorios, name='listar_laboratorios'),

@@ -11,7 +11,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from . import emails, usuarios
-from .servicos import catalogo, financeiro, pagamentos, reservas, solicitacoes
+from .servicos import catalogo, contas, financeiro, pagamentos, reservas, solicitacoes
 from .decorators import admin_required, aprovado_required, gestor_required
 from .forms import (
     AgendamentoForm,
@@ -58,8 +58,14 @@ def cadastrar(request):
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
             novo = form.save()
-            emails.notificar_novo_cadastro(novo)
-            messages.success(request, 'Conta criada com sucesso! Aguarde a aprovação do administrador para acessar o sistema.')
+            novo.perfil.email_verificado = False
+            novo.perfil.save(update_fields=['email_verificado'])
+            contas.enviar_confirmacao(novo, request.META.get('REMOTE_ADDR', ''))
+            messages.success(
+                request,
+                'Conta criada! Enviamos um link de confirmação para o seu e-mail. '
+                'Depois de confirmar, aguarde a aprovação do administrador para acessar o sistema.'
+            )
             return redirect('login')
     else:
         form = CustomUserCreationForm()
@@ -681,6 +687,7 @@ def notificacoes(request):
         for slug, ev in emails.EVENTOS.items()
     ]
     titulos = {slug: ev.titulo for slug, ev in emails.EVENTOS.items()}
+    titulos.update(emails.EVENTOS_SEGURANCA)
     logs = _paginar(request, LogNotificacao.objects.select_related('usuario'))
     for item in logs:
         item.titulo_evento = titulos.get(item.evento, item.evento)

@@ -1046,14 +1046,15 @@ class NotificacoesTests(TestCase):
         self.admin = criar_usuario('adm', tipo='ADMIN', email='adm@example.com')
         self.aluno = criar_usuario('alu', email='alu@example.com')
 
-    def test_cadastro_novo_avisa_administradores(self):
+    def test_cadastro_novo_confirma_email_e_so_depois_avisa_administradores(self):
         with self.captureOnCommitCallbacks(execute=True):
             self.client.post(reverse('cadastrar'), {
                 'username': 'novato', 'email': 'novato@example.com',
                 'password1': 'Senha-Forte-123', 'password2': 'Senha-Forte-123',
             })
         self.assertTrue(User.objects.filter(username='novato').exists())
-        self.assertEqual([m.to for m in self.mail.outbox], [['adm@example.com']])
+        # No cadastro só o novo usuário recebe (link de confirmação); o admin ainda não é avisado.
+        self.assertEqual([m.to for m in self.mail.outbox], [['novato@example.com']])
 
     def test_evento_desligado_nao_envia_e_registra_no_log(self):
         from .models import ConfiguracaoNotificacao, LogNotificacao
