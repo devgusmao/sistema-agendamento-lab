@@ -56,6 +56,7 @@ de teste. Alternativa: `EMAIL_HOST_USER` e `EMAIL_HOST_PASSWORD` no `.env`, usad
 quando nada foi salvo na tela. Sem nenhuma das duas, as mensagens só aparecem no log.
 
 O menu "Notificações" lista tudo o que o sistema avisa (reserva confirmada/cancelada,
+nova reserva e cancelamento feito pelo usuário para os administradores,
 lembrete, novo cadastro, cadastro aprovado, acesso revogado, senha redefinida e
 solicitações de software), permite ligar/desligar cada evento e mostra o histórico de
 envios (sem guardar endereços de e-mail).

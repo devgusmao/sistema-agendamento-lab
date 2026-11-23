@@ -64,6 +64,18 @@ EVENTOS = {
         'Enviado quando um administrador cancela a reserva de outra pessoa ou quando a máquina '
         'entra em manutenção/inativa e as reservas futuras são canceladas.',
         'Dono da reserva', True),
+    'reserva_nova_admin': Evento(
+        'Nova reserva (aviso à administração)',
+        'Avisa os administradores a cada reserva feita por outro usuário, com máquina, horário e valor.',
+        'Todos os administradores', True),
+    'reserva_cancelada_propria': Evento(
+        'Cancelamento confirmado ao usuário',
+        'Enviado ao usuário quando ele mesmo cancela uma reserva, com a multa aplicada, se houver.',
+        'Quem cancelou', True),
+    'reserva_cancelada_admin': Evento(
+        'Cancelamento feito pelo usuário (aviso à administração)',
+        'Avisa os administradores quando um usuário cancela a própria reserva, com a multa a cobrar.',
+        'Todos os administradores', True),
     'lembrete_reserva': Evento(
         'Lembrete de reserva',
         'Enviado algumas horas antes do início da reserva (configurável, padrão 2 h). '
@@ -223,6 +235,46 @@ def notificar_reserva_cancelada(ag, motivo=''):
         ],
         destaque='Se precisar, faça uma nova reserva em outro horário ou máquina.',
     ))
+
+
+def notificar_nova_reserva_admins(ag):
+    """Avisa os administradores de uma reserva nova (quem reservou não recebe o aviso duas vezes)."""
+    for admin in _administradores().exclude(pk=ag.usuario_id):
+        enviar('reserva_nova_admin', admin, 'Nova reserva registrada', Conteudo(
+            'Nova reserva registrada', '📅', 'info',
+            [f'{_nome(ag.usuario)} fez uma nova reserva.'],
+            detalhes=[
+                ('Usuário', ag.usuario.username),
+                ('Máquina', _maquina(ag)),
+                ('Início', _fmt(ag.data_hora_inicio)),
+                ('Término', _fmt(ag.data_hora_fim)),
+                ('Valor', _moeda(ag.valor_total)),
+            ],
+        ))
+
+
+def notificar_cancelamento_pelo_dono(ag):
+    """O usuário cancelou a própria reserva: confirma a ele e avisa os administradores."""
+    multa = ag.multa or 0
+    detalhes = [('Máquina', _maquina(ag)), ('Início', _fmt(ag.data_hora_inicio))]
+    if multa > 0:
+        detalhes.append(('Multa', _moeda(multa)))
+    enviar('reserva_cancelada_propria', ag.usuario, 'Cancelamento confirmado', Conteudo(
+        'Cancelamento confirmado', '❌', 'aviso' if multa > 0 else 'sucesso',
+        ['Sua reserva foi cancelada.'],
+        detalhes=detalhes,
+        destaque=(
+            f'Como o cancelamento foi feito com menos de {settings.AGENDAMENTO_MULTA_HORAS} h de antecedência, '
+            f'foi aplicada multa de {_moeda(multa)}. O pagamento é registrado pela administração.'
+        ) if multa > 0 else 'Cancelamento dentro do prazo: nenhuma multa foi aplicada.',
+    ))
+    for admin in _administradores().exclude(pk=ag.usuario_id):
+        enviar('reserva_cancelada_admin', admin, 'Reserva cancelada pelo usuário', Conteudo(
+            'Reserva cancelada pelo usuário', '❌', 'aviso' if multa > 0 else 'info',
+            [f'{_nome(ag.usuario)} cancelou a própria reserva.'],
+            detalhes=[('Usuário', ag.usuario.username), *detalhes],
+            destaque=f'Há multa de {_moeda(multa)} a cobrar.' if multa > 0 else '',
+        ))
 
 
 def notificar_lembrete_reserva(ag):

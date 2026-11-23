@@ -69,6 +69,7 @@ def reservar(usuario, computador, tipo, inicio, fim):
             agendamento.status_pagamento = Agendamento.PAGAMENTO_ISENTO
         agendamento.save()
         emails.notificar_reserva_confirmada(agendamento)
+        emails.notificar_nova_reserva_admins(agendamento)
     return agendamento
 
 
@@ -97,6 +98,8 @@ def cancelar(agendamento, ator):
         atual.cancelar(ator, multa=multa)
         if atual.usuario_id != ator.id:
             emails.notificar_reserva_cancelada(atual, 'cancelada pela administração.')
+        else:
+            emails.notificar_cancelamento_pelo_dono(atual)
     agendamento.refresh_from_db()
     return agendamento
 
