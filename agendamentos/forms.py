@@ -42,6 +42,25 @@ class EsqueciSenhaForm(forms.Form):
         self.fields['email'].widget.attrs.update({'autocomplete': 'email', 'autofocus': True})
 
 
+class CodigoForm(forms.Form):
+    """E-mail do cadastro + código de 6 dígitos recebido nele."""
+
+    email = forms.EmailField(label='E-mail do cadastro', max_length=254)
+    codigo = forms.CharField(
+        label='Código de 6 dígitos', max_length=12, strip=True,
+        widget=forms.TextInput(attrs={
+            'inputmode': 'numeric', 'autocomplete': 'one-time-code', 'maxlength': '12',
+            'placeholder': '000000', 'class': 'campo-codigo',
+        }),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _com_classe_form_control(self.fields)
+        self.fields['codigo'].widget.attrs['class'] = 'form-control campo-codigo'
+        self.fields['email'].widget.attrs['autocomplete'] = 'email'
+
+
 class NovaSenhaForm(SetPasswordForm):
     """Nova senha criada pelo próprio usuário pelo link do e-mail (segue os validadores de senha)."""
 

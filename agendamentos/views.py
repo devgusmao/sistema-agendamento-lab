@@ -69,10 +69,11 @@ def cadastrar(request):
             contas.enviar_confirmacao(novo, request.META.get('REMOTE_ADDR', ''))
             messages.success(
                 request,
-                'Conta criada! Enviamos um link de confirmação para o seu e-mail. '
-                'Depois de confirmar, aguarde a aprovação do administrador para acessar o sistema.'
+                'Conta criada! Enviamos um código de 6 dígitos para o seu e-mail. '
+                'Digite-o abaixo e, depois, aguarde a aprovação do administrador para acessar o sistema.'
             )
-            return redirect('login')
+            request.session['_email_codigo'] = novo.email
+            return redirect('confirmar_email')
     else:
         form = CustomUserCreationForm()
 

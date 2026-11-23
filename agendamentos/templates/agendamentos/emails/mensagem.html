@@ -56,11 +56,20 @@
                     </tr>
                     {% endif %}
 
+                    {% if codigo %}
+                    <tr>
+                        <td style="padding:8px 28px 4px;">
+                            <p style="margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;text-align:center;">Seu código</p>
+                            <div style="background-color:#f1f5f9;border:2px dashed {{ cor }};border-radius:12px;padding:18px 10px;font-family:Consolas,'Courier New',monospace;font-size:38px;font-weight:800;letter-spacing:10px;text-align:center;color:#0f172a;">{{ codigo }}</div>
+                        </td>
+                    </tr>
+                    {% endif %}
+
                     {% if botao %}
                     <tr>
                         <td align="center" style="padding:20px 28px 4px;">
                             <a href="{{ botao.1 }}" style="display:inline-block;background-color:{{ cor }};color:#ffffff;text-decoration:none;font-weight:700;font-size:16px;padding:14px 32px;border-radius:10px;">{{ botao.0 }}</a>
-                            <p style="margin:14px 0 0;font-size:12px;line-height:1.5;color:#94a3b8;word-break:break-all;">Se o botão não funcionar, copie e cole este endereço no navegador:<br><a href="{{ botao.1 }}" style="color:#64748b;">{{ botao.1 }}</a></p>
+                            <p style="margin:14px 0 0;font-size:12px;line-height:1.5;color:#94a3b8;word-break:break-all;">Se o botão não funcionar, copie e cole este endereço no navegador (ou use o token acima):<br><a href="{{ botao.1 }}" style="color:#64748b;">{{ botao.1 }}</a></p>
                         </td>
                     </tr>
                     {% endif %}

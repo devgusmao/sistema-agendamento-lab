@@ -187,16 +187,16 @@ AGENDAMENTO_LEMBRETE_HORAS = config('AGENDAMENTO_LEMBRETE_HORAS', default=2, cas
 AGENDAMENTO_MULTA_HORAS = config('AGENDAMENTO_MULTA_HORAS', default=24, cast=int)
 AGENDAMENTO_MULTA_PERCENTUAL = config('AGENDAMENTO_MULTA_PERCENTUAL', default=50, cast=int)
 
-# --- Confirmação de e-mail e recuperação de senha ---
-# Endereço público do sistema, usado nos links enviados por e-mail (não vem do cabeçalho
-# Host da requisição, para não permitir links falsos). Em produção, use o domínio com HTTPS.
-SITE_URL = config('SITE_URL', default='http://localhost:8001')
-# O link de recuperação vale por pouco tempo e só pode ser usado uma vez.
-PASSWORD_RESET_TIMEOUT = config('RESET_SENHA_VALIDADE_MIN', default=30, cast=int) * 60
-CONFIRMACAO_EMAIL_VALIDADE_HORAS = config('CONFIRMACAO_EMAIL_VALIDADE_HORAS', default=24, cast=int)
-# Pedidos de e-mail sensível por hora (anti-abuso): por usuário e por endereço IP.
+# --- Confirmação de e-mail e recuperação de senha (código numérico de 6 dígitos) ---
+CODIGO_RECUPERACAO_VALIDADE_MIN = config('CODIGO_RECUPERACAO_VALIDADE_MIN', default=15, cast=int)
+CONFIRMACAO_EMAIL_VALIDADE_MIN = config('CONFIRMACAO_EMAIL_VALIDADE_MIN', default=30, cast=int)
+# Tentativas erradas por código; depois disso ele é invalidado e é preciso pedir outro.
+CODIGO_MAX_TENTATIVAS = config('CODIGO_MAX_TENTATIVAS', default=5, cast=int)
+# Pedidos de código por hora (anti-abuso): por usuário e por endereço IP.
 LIMITE_EMAIL_POR_USUARIO_HORA = config('LIMITE_EMAIL_POR_USUARIO_HORA', default=3, cast=int)
 LIMITE_EMAIL_POR_IP_HORA = config('LIMITE_EMAIL_POR_IP_HORA', default=10, cast=int)
+# Tentativas de digitar código por hora e por IP (contra adivinhação).
+LIMITE_TENTATIVAS_TOKEN_IP_HORA = config('LIMITE_TENTATIVAS_TOKEN_IP_HORA', default=20, cast=int)
 
 # --- E-mail (Gmail via SMTP) ---
 # Sem EMAIL_HOST_USER, os e-mails são apenas impressos no console (modo dev).

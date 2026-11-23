@@ -34,12 +34,13 @@
                 <div style="font-size: 2.5rem;">✉️</div>
                 <h2>Confirme o seu e-mail</h2>
                 <p>
-                    Olá, <strong>{{ user.username }}</strong>. Enviamos um link de confirmação para o e-mail do seu cadastro.
-                    Abra a mensagem e clique no botão para continuar. Depois, um administrador precisa liberar o seu acesso.
+                    Olá, <strong>{{ user.username }}</strong>. Enviamos um código de 6 dígitos para o e-mail do seu cadastro.
+                    Digite o código na tela de confirmação. Depois, um administrador precisa liberar o seu acesso.
                 </p>
+                <a href="{% url 'confirmar_email' %}" class="btn-reenviar" style="display:inline-block;text-decoration:none;">Digitar o código</a>
                 <form action="{% url 'reenviar_confirmacao' %}" method="post">
                     {% csrf_token %}
-                    <button type="submit" class="btn-reenviar">Reenviar e-mail de confirmação</button>
+                    <button type="submit" class="btn-reenviar" style="background:#64748b;">Reenviar código</button>
                 </form>
             {% else %}
                 <div style="font-size: 2.5rem;">⏳</div>

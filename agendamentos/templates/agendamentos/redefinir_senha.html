@@ -13,38 +13,54 @@
     <main class="auth-main">
     <div class="auth-shell">
         <div class="auth-card">
-            {% if valido %}
-                <div class="auth-header">
-                    <h1>Criar nova senha</h1>
-                </div>
-                <form method="post" class="form-stack">
-                    {% csrf_token %}
-                    {% if form.errors %}
-                        <ul class="errorlist">
-                            {% for field in form %}{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}{% endfor %}
-                            {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
-                        </ul>
-                    {% endif %}
-                    <div class="field">
-                        <label for="id_new_password1">Nova senha</label>
-                        {{ form.new_password1 }}
-                        <span class="form-help">Mínimo de 8 caracteres, sem ser só números nem uma senha comum.</span>
-                    </div>
-                    <div class="field">
-                        <label for="id_new_password2">Confirme a nova senha</label>
-                        {{ form.new_password2 }}
-                    </div>
-                    <button type="submit" class="auth-button">Salvar nova senha</button>
-                </form>
-            {% else %}
-                <div class="auth-header">
-                    <h1>Link inválido ou expirado</h1>
-                </div>
-                <div class="form-alert form-alert-error">
-                    Este link de recuperação não vale mais. Ele expira em pouco tempo e só pode ser usado uma vez.
-                </div>
-                <a href="{% url 'esqueci_senha' %}" class="auth-button">Pedir um novo link</a>
+            <div class="auth-header">
+                <h1>Criar nova senha</h1>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="form-alert form-alert-success">{{ message }}</div>
+                {% endfor %}
             {% endif %}
+
+            <p class="form-help" style="text-align:center;margin:-0.5rem 0 1.25rem;">
+                Digite o código de 6 dígitos enviado ao seu e-mail e escolha a nova senha.
+            </p>
+
+            <form method="post" class="form-stack">
+                {% csrf_token %}
+                {% if form_codigo.codigo.errors %}<div class="form-alert form-alert-error">{{ form_codigo.codigo.errors.0 }}</div>{% endif %}
+                {% if form_codigo.email.errors %}<div class="form-alert form-alert-error">Informe um e-mail válido.</div>{% endif %}
+                {% if form_senha.errors %}
+                    <ul class="errorlist">
+                        {% for field in form_senha %}{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}{% endfor %}
+                        {% for error in form_senha.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+                    </ul>
+                {% endif %}
+                <div class="field">
+                    <label for="id_email">E-mail do cadastro</label>
+                    {{ form_codigo.email }}
+                </div>
+                <div class="field">
+                    <label for="id_codigo">Código de 6 dígitos</label>
+                    {{ form_codigo.codigo }}
+                </div>
+                <div class="field">
+                    <label for="id_new_password1">Nova senha</label>
+                    <input type="password" name="new_password1" id="id_new_password1" class="form-control" autocomplete="new-password" required>
+                    <span class="form-help">Mínimo de 8 caracteres, sem ser só números nem uma senha comum.</span>
+                </div>
+                <div class="field">
+                    <label for="id_new_password2">Confirme a nova senha</label>
+                    <input type="password" name="new_password2" id="id_new_password2" class="form-control" autocomplete="new-password" required>
+                </div>
+                <button type="submit" class="auth-button">Salvar nova senha</button>
+            </form>
+
+            <div class="auth-footer">
+                Não recebeu o código? <a href="{% url 'esqueci_senha' %}">Pedir outro</a><br>
+                <a href="{% url 'login' %}">Voltar ao login</a>
+            </div>
         </div>
     </div>
     </main>

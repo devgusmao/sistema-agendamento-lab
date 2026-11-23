@@ -73,18 +73,24 @@ veja o `.env.example`.
 
 ### Cadastro com confirmação de e-mail e recuperação de senha
 
-- **Cadastro:** o usuário recebe um link de confirmação (válido por 24 h). Só depois de
-  confirmar, os administradores são avisados. O acesso continua exigindo a aprovação de um
-  administrador, e a tela de aprovação mostra se o e-mail já foi confirmado.
-- **Esqueci minha senha:** o link enviado por e-mail vale por 30 min e só pode ser usado uma
-  vez. O usuário cria a nova senha sozinho, com as regras de senha do sistema. Quem já está
-  aprovado volta a entrar sem nova aprovação; conta nova continua aguardando o administrador.
-- **Segurança:** a resposta é a mesma exista ou não o e-mail; há limite de pedidos por usuário
-  (3/h) e por IP (10/h); o token sai da URL logo no primeiro acesso; o link usa o `SITE_URL`
-  (não o cabeçalho `Host`); as sessões abertas caem ao trocar a senha; o login travado por
-  tentativas é liberado; e o dono da conta recebe um alerta de senha alterada.
-- Configure `SITE_URL` (domínio com HTTPS em produção). Validades e limites no `.env.example`.
-- Sem e-mail configurado (Gmail), os links só aparecem no log e ninguém consegue confirmar.
+Os dois fluxos usam um **código numérico de 6 dígitos** enviado por e-mail (sem link, então
+funcionam mesmo com o sistema fora da internet).
+
+- **Cadastro:** o usuário recebe o código (válido por 30 min) e o digita na tela "Confirmar
+  e-mail" junto com o e-mail do cadastro. Só depois de confirmar, os administradores são
+  avisados. O acesso continua exigindo a aprovação de um administrador, e a tela de aprovação
+  mostra se o e-mail já foi confirmado.
+- **Esqueci minha senha:** o código vale por 15 min e é de uso único. O usuário informa o
+  e-mail, o código e a nova senha numa tela só, com as regras de senha do sistema. O código só
+  é gasto se a senha for aceita. Quem já está aprovado volta a entrar sem nova aprovação; conta
+  nova continua aguardando o administrador.
+- **Proteções do código curto:** guardado só como HMAC com a `SECRET_KEY`; no máximo 5 erros por
+  código (depois é preciso pedir outro); um código novo invalida o anterior; limite de 3
+  pedidos por hora por usuário, 10 por IP e 20 tentativas de digitação por IP.
+- **Segurança:** resposta igual exista ou não o e-mail; as sessões abertas caem ao trocar a
+  senha; o login travado por tentativas é liberado; e o dono recebe um alerta de senha alterada.
+- Validades e limites no `.env.example`. Sem e-mail configurado (Gmail), os códigos só aparecem
+  no log e ninguém consegue confirmar.
 
 ### Comandos úteis
 

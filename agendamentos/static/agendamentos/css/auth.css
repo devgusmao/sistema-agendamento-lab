@@ -223,3 +223,12 @@
         align-items: flex-start;
     }
 }
+
+/* Campo do código de 6 dígitos */
+.campo-codigo {
+    text-align: center;
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 1.6rem !important;
+    font-weight: 700;
+    letter-spacing: 0.35em;
+}

@@ -17,7 +17,7 @@
                 <h1>Esqueci minha senha</h1>
             </div>
             <p class="form-help" style="text-align:center;margin:-0.5rem 0 1.25rem;">
-                Informe o e-mail do seu cadastro. Se ele existir, enviaremos um link para você criar uma nova senha.
+                Informe o e-mail do seu cadastro. Se ele existir, enviaremos um código de 6 dígitos para você digitar na próxima tela e criar uma nova senha.
             </p>
 
             <form method="post" class="form-stack">
@@ -29,10 +29,11 @@
                     <label for="id_email">E-mail cadastrado</label>
                     {{ form.email }}
                 </div>
-                <button type="submit" class="auth-button">Enviar link</button>
+                <button type="submit" class="auth-button">Enviar código</button>
             </form>
 
             <div class="auth-footer">
+                Já tem um código? <a href="{% url 'redefinir_senha' %}">Digitar o código</a><br>
                 <a href="{% url 'login' %}">Voltar ao login</a>
             </div>
         </div>

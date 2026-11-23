@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Confirmação de e-mail - LabManager</title>
+    <title>Confirmar e-mail - LabManager</title>
     <link rel="stylesheet" href="{% static 'agendamentos/css/styles.css' %}">
     <link rel="stylesheet" href="{% static 'agendamentos/css/auth.css' %}">
 </head>
@@ -13,7 +13,7 @@
     <main class="auth-main">
     <div class="auth-shell">
         <div class="auth-card">
-            {% if valido %}
+            {% if confirmado %}
                 <div class="auth-header">
                     <h1>E-mail confirmado</h1>
                 </div>
@@ -24,12 +24,43 @@
                 <a href="{% url 'login' %}" class="auth-button">Ir para o login</a>
             {% else %}
                 <div class="auth-header">
-                    <h1>Link inválido ou expirado</h1>
+                    <h1>Confirmar e-mail</h1>
                 </div>
-                <div class="form-alert form-alert-error">
-                    Não foi possível confirmar o e-mail. O link pode ter expirado. Entre com a sua conta para pedir um novo.
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="form-alert {% if message.tags == 'error' %}form-alert-error{% else %}form-alert-success{% endif %}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+
+                <p class="form-help" style="text-align:center;margin:-0.5rem 0 1.25rem;">
+                    Digite o código de 6 dígitos que enviamos para o e-mail do seu cadastro.
+                </p>
+
+                <form method="post" class="form-stack">
+                    {% csrf_token %}
+                    {% if form.codigo.errors %}<div class="form-alert form-alert-error">{{ form.codigo.errors.0 }}</div>{% endif %}
+                    {% if form.email.errors %}<div class="form-alert form-alert-error">Informe um e-mail válido.</div>{% endif %}
+                    <div class="field">
+                        <label for="id_email">E-mail do cadastro</label>
+                        {{ form.email }}
+                    </div>
+                    <div class="field">
+                        <label for="id_codigo">Código de 6 dígitos</label>
+                        {{ form.codigo }}
+                    </div>
+                    <button type="submit" class="auth-button">Confirmar e-mail</button>
+                </form>
+
+                <form method="post" action="{% url 'reenviar_confirmacao' %}" class="form-stack" style="margin-top:0.9rem;">
+                    {% csrf_token %}
+                    <input type="hidden" name="email" value="{{ form.email.value|default:'' }}">
+                    <button type="submit" class="auth-button" style="background:#64748b;">Reenviar código</button>
+                </form>
+
+                <div class="auth-footer">
+                    <a href="{% url 'login' %}">Voltar ao login</a>
                 </div>
-                <a href="{% url 'login' %}" class="auth-button">Ir para o login</a>
             {% endif %}
         </div>
     </div>

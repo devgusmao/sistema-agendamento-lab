@@ -32,15 +32,18 @@ TONS = {
 class Conteudo:
     """Conteúdo de uma notificação; gera o texto simples e o HTML a partir dos mesmos dados."""
 
-    def __init__(self, titulo, icone, tom, paragrafos, detalhes=(), destaque='', botao=None):
+    def __init__(self, titulo, icone, tom, paragrafos, detalhes=(), destaque='', botao=None, codigo=''):
         self.titulo, self.icone, self.tom = titulo, icone, tom
         self.paragrafos, self.detalhes, self.destaque = list(paragrafos), list(detalhes), destaque
         self.botao = botao  # (texto, url)
+        self.codigo = codigo  # token para copiar e colar no sistema
 
     def texto(self, saudacao):
         partes = [saudacao, '', *self.paragrafos]
         if self.detalhes:
             partes += ['', *(f'{rotulo}: {valor}' for rotulo, valor in self.detalhes)]
+        if self.codigo:
+            partes += ['', 'Seu código:', self.codigo]
         if self.botao:
             partes += ['', f'{self.botao[0]}: {self.botao[1]}']
         if self.destaque:
@@ -51,7 +54,7 @@ class Conteudo:
         cor, fundo, texto = TONS[self.tom]
         return render_to_string('agendamentos/emails/mensagem.html', {
             'titulo': self.titulo, 'icone': self.icone, 'saudacao': saudacao,
-            'paragrafos': self.paragrafos, 'detalhes': self.detalhes, 'destaque': self.destaque, 'botao': self.botao,
+            'paragrafos': self.paragrafos, 'detalhes': self.detalhes, 'destaque': self.destaque, 'botao': self.botao, 'codigo': self.codigo,
             'resumo': self.paragrafos[0] if self.paragrafos else self.titulo,
             'cor': cor, 'cor_fundo': fundo, 'cor_texto': texto,
         })
@@ -366,29 +369,29 @@ def notificar_solicitacao_atualizada(sol):
 
 # --- Segurança da conta (links com token) ---
 
-def notificar_confirmacao_email(usuario, url, validade_horas):
-    enviar('confirmar_email', usuario, 'Confirme seu e-mail', Conteudo(
+def notificar_confirmacao_email(usuario, codigo, validade_min):
+    enviar('confirmar_email', usuario, 'Código de confirmação', Conteudo(
         'Confirme seu e-mail', '✉️', 'info',
         [
-            'Recebemos seu cadastro no LabManager. Para continuar, confirme que este e-mail é seu.',
+            'Recebemos seu cadastro no LabManager. Digite o código abaixo na tela de confirmação do sistema.',
             'Depois da confirmação, um administrador precisa liberar o seu acesso.',
         ],
-        detalhes=[('Usuário', usuario.username), ('Validade do link', f'{validade_horas} horas')],
+        detalhes=[('Usuário', usuario.username), ('Validade do código', f'{validade_min} minutos')],
         destaque='Se você não fez este cadastro, ignore esta mensagem: nada será ativado.',
-        botao=('Confirmar meu e-mail', url),
+        codigo=codigo,
     ))
 
 
-def notificar_recuperacao_senha(usuario, url, validade_min):
-    enviar('recuperar_senha', usuario, 'Recuperação de senha', Conteudo(
+def notificar_recuperacao_senha(usuario, codigo, validade_min):
+    enviar('recuperar_senha', usuario, 'Código de recuperação de senha', Conteudo(
         'Recuperação de senha', '🔑', 'aviso',
-        ['Recebemos um pedido para criar uma nova senha para a sua conta.'],
-        detalhes=[('Usuário', usuario.username), ('Validade do link', f'{validade_min} minutos'), ('Uso', 'Link de uso único')],
+        ['Recebemos um pedido para criar uma nova senha para a sua conta. Digite o código abaixo na tela de recuperação.'],
+        detalhes=[('Usuário', usuario.username), ('Validade do código', f'{validade_min} minutos'), ('Uso', 'Código de uso único')],
         destaque=(
             'Se você não pediu esta recuperação, ignore esta mensagem: sua senha continua a mesma. '
-            'Nunca compartilhe este link com ninguém.'
+            'Nunca compartilhe este código com ninguém.'
         ),
-        botao=('Criar nova senha', url),
+        codigo=codigo,
     ))
 
 

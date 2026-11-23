@@ -32,8 +32,7 @@ código.
 | Administrador não consegue se rebaixar nem se excluir (anti-lockout) | `agendamentos/views.py` |
 | Cancelamento, pagamento e estorno relêem a reserva sob `select_for_update` (sem sobrescrita em operações simultâneas) | `agendamentos/servicos/` |
 | Registro de pagamento e estorno só por administrador, via `POST` + CSRF | `agendamentos/views.py` |
-| Confirmação de e-mail (token assinado, 24 h) e recuperação de senha (token de uso único, 30 min), com resposta igual exista ou não a conta e limite por usuário e por IP | `agendamentos/servicos/contas.py`, `limites.py` |
-| Links de e-mail montados com `SITE_URL`, não com o cabeçalho `Host`; token tirado da URL após o primeiro acesso; páginas sem cache | `agendamentos/views_conta.py` |
+| Confirmação de e-mail (30 min) e recuperação de senha (15 min) por código numérico de 6 dígitos: uso único, guardado só como HMAC, no máximo 5 erros por código, um código ativo por vez, resposta igual exista ou não a conta e limites de pedidos e de tentativas por usuário e por IP | `agendamentos/servicos/codigos.py`, `contas.py`, `limites.py` |
 | Reserva criada sob `select_for_update` (evita corrida de sobreposição) | `agendamentos/views.py` |
 | `.env` fora da imagem Docker | `.dockerignore` |
 

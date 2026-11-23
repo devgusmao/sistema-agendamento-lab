@@ -436,3 +436,27 @@ class LimiteSolicitacao(models.Model):
 
     class Meta:
         indexes = [models.Index(fields=['chave', 'criado_em'])]
+
+
+class CodigoVerificacao(models.Model):
+    """Código numérico curto enviado por e-mail (confirmar e-mail ou recuperar senha).
+
+    O código nunca é guardado em texto: só um HMAC (com a SECRET_KEY), então quem tem apenas
+    o dump do banco não consegue descobri-lo. Vale por pouco tempo, para uma única vez, e
+    deixa de valer depois de poucas tentativas erradas.
+    """
+
+    EMAIL = 'EMAIL'
+    SENHA = 'SENHA'
+    FINALIDADE_CHOICES = [(EMAIL, 'Confirmar e-mail'), (SENHA, 'Recuperar senha')]
+
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='+')
+    finalidade = models.CharField(max_length=5, choices=FINALIDADE_CHOICES)
+    codigo_hash = models.CharField(max_length=64)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    expira_em = models.DateTimeField()
+    tentativas = models.PositiveSmallIntegerField(default=0)
+    usado_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['usuario', 'finalidade'])]
