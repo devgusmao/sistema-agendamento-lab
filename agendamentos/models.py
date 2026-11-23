@@ -182,6 +182,31 @@ class Agendamento(models.Model):
     )
     lembrete_enviado_em = models.DateTimeField(null=True, blank=True)
 
+    # --- Multa e pagamento (registro manual pelo administrador; sem gateway online) ---
+    PAGAMENTO_PENDENTE = 'PENDENTE'
+    PAGAMENTO_PAGO = 'PAGO'
+    PAGAMENTO_ESTORNADO = 'ESTORNADO'
+    PAGAMENTO_ISENTO = 'ISENTO'
+    PAGAMENTO_CHOICES = [
+        (PAGAMENTO_PENDENTE, 'Pendente'),
+        (PAGAMENTO_PAGO, 'Pago'),
+        (PAGAMENTO_ESTORNADO, 'Estornado'),
+        (PAGAMENTO_ISENTO, 'Isento'),
+    ]
+
+    multa = models.DecimalField(
+        max_digits=8, decimal_places=2, default=0,
+        help_text="Multa aplicada no cancelamento fora do prazo",
+    )
+    status_pagamento = models.CharField(max_length=10, choices=PAGAMENTO_CHOICES, default=PAGAMENTO_PENDENTE)
+    valor_pago = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    valor_estornado = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    pago_em = models.DateTimeField(null=True, blank=True)
+    estornado_em = models.DateTimeField(null=True, blank=True)
+    pagamento_registrado_por = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name='pagamentos_registrados'
+    )
+
     class Meta:
         ordering = ['-data_hora_inicio']
         indexes = [
@@ -212,11 +237,37 @@ class Agendamento(models.Model):
             return False
         return self.usuario_id == user.id or perfil_e_admin(user)
 
-    def cancelar(self, por_usuario):
+    def cancelar(self, por_usuario, multa=Decimal('0.00')):
+        """Marca como cancelada e acerta a cobrança.
+
+        Sem multa, uma reserva ainda não paga deixa de ter o que cobrar (Isento);
+        uma já paga fica com estorno pendente (ver `estorno_pendente`).
+        """
         self.status = 'CANCELADO'
         self.cancelado_em = timezone.now()
         self.cancelado_por = por_usuario
-        self.save(update_fields=['status', 'cancelado_em', 'cancelado_por'])
+        self.multa = multa
+        if self.status_pagamento == self.PAGAMENTO_PENDENTE and multa <= 0:
+            self.status_pagamento = self.PAGAMENTO_ISENTO
+        self.save(update_fields=['status', 'cancelado_em', 'cancelado_por', 'multa', 'status_pagamento'])
+
+    @property
+    def valor_devido(self):
+        """O que o usuário deve: o valor da reserva, ou só a multa se foi cancelada."""
+        return self.valor_total if self.status == 'CONFIRMADO' else self.multa
+
+    @property
+    def estorno_pendente(self):
+        """Quanto ainda precisa ser devolvido (reserva paga e depois cancelada)."""
+        if self.status != 'CANCELADO' or self.status_pagamento != self.PAGAMENTO_PAGO:
+            return Decimal('0.00')
+        return max(self.valor_pago - self.valor_devido - self.valor_estornado, Decimal('0.00'))
+
+    @property
+    def multa_se_cancelar(self):
+        """Multa que o dono pagaria se cancelasse agora (para avisar antes de confirmar)."""
+        from .servicos.precos import calcular_multa
+        return calcular_multa(valor_total=self.valor_total, inicio=self.data_hora_inicio, dono_cancela=True)
 
     def __str__(self):
         return f"{self.usuario.username} - {self.computador.identificador}"

@@ -2,11 +2,11 @@ from django import forms
 from django.conf import settings
 from django.contrib.auth.forms import PasswordChangeForm, SetPasswordForm, UserCreationForm
 from django.contrib.auth.models import User
-from django.utils import timezone
 
 from .models import (
     Agendamento, Computador, ConfiguracaoEmail, Laboratorio, Perfil, Software, SolicitacaoInstalacao, TipoAgendamento,
 )
+from .servicos.regras import validar_janela
 
 
 def _com_classe_form_control(fields):
@@ -165,50 +165,7 @@ class AgendamentoForm(forms.ModelForm):
         fim = cleaned_data.get('data_hora_fim')
 
         if inicio and fim:
-            agora = timezone.now()
-
-            minima = timezone.timedelta(minutes=settings.AGENDAMENTO_DURACAO_MINIMA_MIN)
-            maxima = timezone.timedelta(minutes=tipo.duracao_maxima() if tipo else settings.AGENDAMENTO_DURACAO_MAXIMA_MIN)
-            antecedencia = timezone.timedelta(days=settings.AGENDAMENTO_ANTECEDENCIA_MAXIMA_DIAS)
-            bloco = settings.AGENDAMENTO_BLOCO_MIN
-
-            # 5 min de tolerância para o tempo gasto preenchendo o formulário.
-            if inicio < agora - timezone.timedelta(minutes=5):
-                raise forms.ValidationError('A data de início do agendamento não pode ser no passado.')
-
-            if inicio > agora + antecedencia:
-                raise forms.ValidationError(
-                    f'Só é possível reservar com até {settings.AGENDAMENTO_ANTECEDENCIA_MAXIMA_DIAS} dias de antecedência.'
-                )
-
-            if fim <= inicio:
-                raise forms.ValidationError('A data/hora de término deve ser posterior ao horário de início.')
-
-            for rotulo, dt in (('início', inicio), ('término', fim)):
-                local = timezone.localtime(dt)
-                if local.second or local.microsecond or local.minute % bloco:
-                    raise forms.ValidationError(
-                        f'O {rotulo} deve estar alinhado a blocos de {bloco} minutos (ex.: 14:00, 14:30).'
-                    )
-
-            if fim - inicio < minima:
-                raise forms.ValidationError(f'A duração mínima da reserva é de {settings.AGENDAMENTO_DURACAO_MINIMA_MIN} minutos.')
-
-            if fim - inicio > maxima:
-                horas = maxima.total_seconds() / 3600
-                raise forms.ValidationError(f'O tempo máximo permitido por reserva é de {horas:g} hora(s).')
-
-            abertura, fechamento = settings.AGENDAMENTO_HORA_ABERTURA, settings.AGENDAMENTO_HORA_FECHAMENTO
-            if (abertura, fechamento) != (0, 24):
-                li, lf = timezone.localtime(inicio), timezone.localtime(fim)
-                minutos_ini = li.hour * 60 + li.minute
-                # término à meia-noite do dia seguinte conta como 24h
-                virou_dia = lf.date() > li.date()
-                minutos_fim = 24 * 60 if virou_dia and lf.hour == lf.minute == 0 else lf.hour * 60 + lf.minute
-                if (virou_dia and minutos_fim != 24 * 60) or minutos_ini < abertura * 60 or minutos_fim > fechamento * 60:
-                    raise forms.ValidationError(
-                        f'Os laboratórios funcionam das {abertura:02d}h às {fechamento:02d}h.'
-                    )
+            validar_janela(inicio, fim, tipo)
 
         return cleaned_data
 

@@ -90,6 +90,10 @@
     <div class="stat-card"><p class="stat-label">Receita prevista</p><p class="stat-value">R$ {{ receita_prevista|floatformat:2 }}</p></div>
     <div class="stat-card"><p class="stat-label">Receita total (confirmada)</p><p class="stat-value">R$ {{ total_geral|floatformat:2 }}</p></div>
     <div class="stat-card"><p class="stat-label">Valor cancelado</p><p class="stat-value">R$ {{ valor_cancelado|floatformat:2 }}</p></div>
+    <div class="stat-card"><p class="stat-label">Multas aplicadas</p><p class="stat-value">R$ {{ multas|floatformat:2 }}</p></div>
+    <div class="stat-card"><p class="stat-label">Recebido (líquido de estornos)</p><p class="stat-value">R$ {{ recebido|floatformat:2 }}</p></div>
+    <div class="stat-card"><p class="stat-label">A receber</p><p class="stat-value">R$ {{ a_receber|floatformat:2 }}</p></div>
+    <div class="stat-card"><p class="stat-label">Estornos a devolver</p><p class="stat-value">R$ {{ estornos_pendentes|floatformat:2 }}</p></div>
     <div class="stat-card"><p class="stat-label">Reservas confirmadas</p><p class="stat-value">{{ total_reservas }}</p></div>
     <div class="stat-card"><p class="stat-label">Taxa de cancelamento</p><p class="stat-value">{{ taxa_cancelamento }}%</p></div>
     <div class="stat-card"><p class="stat-label">Ticket médio</p><p class="stat-value">R$ {{ ticket_medio|floatformat:2 }}</p></div>

@@ -67,7 +67,7 @@ envios (sem guardar endereços de e-mail).
 ```
 
 A antecedência é `AGENDAMENTO_LEMBRETE_HORAS` (padrão 2). As regras de agendamento
-(duração, blocos, limite de reservas e horário) também são ajustáveis pelo `.env`;
+(duração, blocos, limite de reservas, horário e multa de cancelamento) também são ajustáveis pelo `.env`;
 veja o `.env.example`.
 
 ### Comandos úteis
@@ -101,7 +101,9 @@ administrador antes de conseguir usar o sistema.
 - Painel de máquinas com busca e filtros por laboratório, software e status.
 - Reserva com seleção de data/hora (Flatpickr), limite de **2 horas** por reserva
   e antecedência máxima de **30 dias**.
-- Prévia do custo calculada em tempo real a partir da tarifa por hora da máquina.
+- Prévia do custo calculada em tempo real a partir da tarifa por hora do tipo de agendamento.
+- **Multa de cancelamento:** quem cancela a própria reserva paga com menos de 24 h de antecedência paga 50% do valor (ambos configuráveis). Reservas gratuitas e cancelamentos feitos pela administração ou por manutenção da máquina não geram multa. A tela avisa o valor da multa antes de cancelar.
+- **Pagamento e estorno (registro manual):** cada reserva tem status de pagamento (Pendente, Pago, Estornado ou Isento). O administrador registra o recebimento e a devolução na tela de gestão de reservas; não há gateway de pagamento online.
 - Bloqueio de horários sobrepostos com trava no banco (`select_for_update`).
 - Calendário lateral com os horários já ocupados da máquina.
 - **Cancelamento pelo próprio usuário**, com histórico de quem cancelou e quando.
@@ -122,7 +124,8 @@ administrador antes de conseguir usar o sistema.
 - Notificações por e-mail configuráveis, com histórico, e tela para configurar o Gmail.
 - Gestão global de reservas com filtros por usuário, status e período.
 - Dashboard financeiro: receita por laboratório e por máquina, total de horas
-  reservadas e distribuição por tipo de agendamento.
+  reservadas, distribuição por tipo de agendamento, multas aplicadas, valor
+  recebido (líquido de estornos), a receber e estornos a devolver.
 - Tipos de agendamento e preços configuráveis (tela "Tipos e Preços").
 
 ### Transversais
@@ -178,6 +181,8 @@ automaticamente por signal no cadastro do usuário.
 * `status`: `CONFIRMADO` | `CANCELADO`
 * `tipo`: `ForeignKey` → `TipoAgendamento` (cadastro configurável pela administração)
 * `valor_hora_aplicado` / `valor_total`: tarifa e total gravados no momento da reserva (mudanças de preço não alteram reservas já feitas)
+* `multa`: valor cobrado quando o próprio dono cancela fora do prazo
+* `status_pagamento`: `PENDENTE` | `PAGO` | `ESTORNADO` | `ISENTO`; `valor_pago`, `valor_estornado`, `pago_em`, `estornado_em`, `pagamento_registrado_por`
 * `criado_em`, `cancelado_em`, `cancelado_por`: rastreabilidade
 
 #### `TipoAgendamento`
@@ -219,9 +224,19 @@ sistema-agendamento-lab/
 │   ├── decorators.py            # Controle de acesso por papel e aprovação
 │   ├── forms.py                 # Formulários e validações de negócio
 │   ├── models.py                # Modelos, constraints e helpers de papel
+│   ├── servicos/                # Regras de negócio (fora das views)
+│   │   ├── regras.py            # Janela da reserva: duração, blocos, horário
+│   │   ├── reservas.py          # Reservar e cancelar, com trava de concorrência
+│   │   ├── precos.py            # Cálculo da multa de cancelamento
+│   │   ├── pagamentos.py        # Registro manual de pagamento e estorno
+│   │   ├── financeiro.py        # Totais do usuário e dashboard
+│   │   ├── solicitacoes.py      # Fluxo das solicitações de software
+│   │   └── catalogo.py          # Busca de máquinas da tela inicial
 │   ├── tests.py                 # Testes de regressão
+│   ├── tests_multas.py          # Testes de multa, pagamento e serviços
 │   ├── urls.py                  # Rotas do app
-│   └── views.py                 # Lógica das telas
+│   ├── usuarios.py              # Regras de alteração e exclusão de usuários
+│   └── views.py                 # Requisição e resposta (sem regra de negócio)
 ├── setup/                       # Configuração global do projeto Django
 │   ├── settings.py              # Banco, segurança, apps instalados
 │   └── urls.py                  # Mapeamento de rotas e do Admin
@@ -245,9 +260,10 @@ sistema-agendamento-lab/
 
 - [x] Limite de tentativas de login (django-axes: 5 falhas → bloqueio de 15 min por usuário+IP; ajustável no `.env`).
 - [x] Notificações por e-mail (aprovação, solicitações, lembretes) com liga/desliga e histórico.
-- [ ] Registro de pagamento, multa de cancelamento e estorno.
+- [x] Multa de cancelamento, registro de pagamento e estorno (manual).
+- [ ] Descontos por perfil, preço por horário e comprovante de pagamento.
 - [ ] Check-in/check-out e controle de não comparecimento.
 - [ ] Relatórios de ocupação e comportamento de uso.
-- [ ] Integração contínua (CI) com testes e verificação de migrações.
+- [x] Integração contínua (CI) com testes e verificação de migrações.
 - [ ] Exportação do dashboard financeiro em CSV/PDF.
 - [ ] Trilha de auditoria completa das ações administrativas.

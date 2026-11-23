@@ -21,6 +21,11 @@
     .status-confirmado { background-color: var(--success-bg); color: var(--success-text); }
     .status-cancelado { background-color: var(--danger-bg); color: var(--danger-text); }
     .status-andamento { background-color: var(--info-bg); color: var(--info-text); }
+    .pg-pendente { background-color: #fef3c7; color: #92400e; }
+    .pg-pago { background-color: var(--success-bg); color: var(--success-text); }
+    .pg-estornado { background-color: var(--info-bg); color: var(--info-text); }
+    .pg-isento { background-color: #f1f5f9; color: #475569; }
+    .aviso-multa { display: block; font-size: 0.74rem; color: var(--danger-text); margin-top: 0.25rem; }
     .status-encerrado { background-color: #f1f5f9; color: #475569; }
 </style>
 {% endblock %}
@@ -43,6 +48,10 @@
     <div class="stat-card">
         <span class="stat-label">Reservas futuras (previsto)</span>
         <span class="stat-value">R$ {{ total_previsto|floatformat:2 }}</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">A pagar (uso e multas)</span>
+        <span class="stat-value">R$ {{ total_a_pagar|floatformat:2 }}</span>
     </div>
 </div>
 
@@ -80,10 +89,13 @@
                         </td>
                         <td>
                             <form method="post" action="{% url 'cancelar_agendamento' a.id %}" class="btn-inline-form"
-                                  onsubmit="return confirm('Cancelar a reserva de {{ a.computador.identificador|escapejs }} em {{ a.data_hora_inicio|date:'d/m/Y H:i' }}?')">
+                                  onsubmit="return confirm('Cancelar a reserva de {{ a.computador.identificador|escapejs }} em {{ a.data_hora_inicio|date:'d/m/Y H:i' }}?{% if a.multa_se_cancelar > 0 %} Será cobrada multa de R$ {{ a.multa_se_cancelar|floatformat:2 }}.{% endif %}')">
                                 {% csrf_token %}
                                 <button type="submit" class="btn-as-link">Cancelar</button>
                             </form>
+                            {% if a.multa_se_cancelar > 0 %}
+                                <span class="aviso-multa">Multa de R$ {{ a.multa_se_cancelar|floatformat:2 }} se cancelar agora</span>
+                            {% endif %}
                         </td>
                     </tr>
                 {% endfor %}
@@ -107,7 +119,9 @@
                     <th>Término</th>
                     <th>Finalidade</th>
                     <th>Valor</th>
+                    <th>Multa</th>
                     <th>Status</th>
+                    <th>Pagamento</th>
                 </tr>
             </thead>
             <tbody>
@@ -118,12 +132,17 @@
                         <td>{{ a.data_hora_fim|date:"d/m/Y H:i" }}</td>
                         <td>{{ a.tipo.nome }}</td>
                         <td>R$ {{ a.valor_total|floatformat:2 }}</td>
+                        <td>{% if a.multa > 0 %}R$ {{ a.multa|floatformat:2 }}{% else %}—{% endif %}</td>
                         <td>
                             {% if a.status == 'CANCELADO' %}
                                 <span class="badge-status status-cancelado">Cancelado</span>
                             {% else %}
                                 <span class="badge-status status-encerrado">Concluído</span>
                             {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge-status pg-{{ a.status_pagamento|lower }}">{{ a.get_status_pagamento_display }}</span>
+                            {% if a.estorno_pendente > 0 %}<span class="aviso-multa">Estorno de R$ {{ a.estorno_pendente|floatformat:2 }} a receber</span>{% endif %}
                         </td>
                     </tr>
                 {% endfor %}
