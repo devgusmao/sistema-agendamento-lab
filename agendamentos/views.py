@@ -1,6 +1,3 @@
-from datetime import datetime
-from decimal import ROUND_HALF_UP, Decimal
-
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
@@ -8,14 +5,13 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models.deletion import ProtectedError
-from django.db.models import Count, DurationField, ExpressionWrapper, F, Prefetch, Q, Sum
-from django.db.models.functions import TruncMonth
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from . import emails, usuarios
+from .servicos import catalogo, financeiro, pagamentos, reservas, solicitacoes
 from .decorators import admin_required, aprovado_required, gestor_required
 from .forms import (
     AgendamentoForm,
@@ -41,7 +37,6 @@ from .models import (
     Software,
     SolicitacaoInstalacao,
     TipoAgendamento,
-    perfil_e_admin,
     perfil_e_gestor,
 )
 
@@ -81,28 +76,7 @@ def home(request):
     status_filtro = request.GET.get('status', '')
     software_id = request.GET.get('software', '')
 
-    agendamentos_futuros = Agendamento.objects.filter(
-        status='CONFIRMADO',
-        data_hora_fim__gte=timezone.now()
-    ).order_by('data_hora_inicio')
-
-    computadores = Computador.objects.select_related('laboratorio').prefetch_related(
-        'softwares',
-        Prefetch('agendamentos', queryset=agendamentos_futuros, to_attr='reservas_ativas')
-    )
-
-    if busca:
-        computadores = computadores.filter(
-            Q(identificador__icontains=busca) | Q(laboratorio__nome__icontains=busca)
-        )
-    if lab_id.isdigit():
-        computadores = computadores.filter(laboratorio_id=lab_id)
-    if status_filtro in dict(Computador.STATUS_CHOICES):
-        computadores = computadores.filter(status=status_filtro)
-    if software_id.isdigit():
-        # O join com softwares duplica linhas quando a máquina tem mais de um
-        # software; distinct() evita a mesma máquina aparecer várias vezes.
-        computadores = computadores.filter(softwares__id=software_id).distinct()
+    computadores = catalogo.buscar_computadores(busca, lab_id, status_filtro, software_id)
 
     context = {
         'computadores': _paginar(request, computadores),
@@ -190,21 +164,6 @@ def cadastrar_computador(request):
     return render(request, 'agendamentos/cadastrar_computador.html', {'form': form})
 
 
-def _cancelar_reservas_futuras(computador, por_usuario):
-    """Cancela reservas confirmadas que ainda não terminaram (máquina fora de operação)."""
-    pendentes = list(
-        Agendamento.objects.select_for_update()
-        .select_related('usuario', 'computador__laboratorio')
-        .filter(computador=computador, status='CONFIRMADO', data_hora_fim__gt=timezone.now())
-    )
-    for ag in pendentes:
-        ag.cancelar(por_usuario)
-        emails.notificar_reserva_cancelada(
-            ag, f'a máquina entrou em "{computador.get_status_display()}".'
-        )
-    return len(pendentes)
-
-
 @gestor_required
 def editar_computador(request, computador_id):
     computador = get_object_or_404(Computador, id=computador_id)
@@ -216,7 +175,7 @@ def editar_computador(request, computador_id):
                 computador = form.save()
                 canceladas = 0
                 if not computador.disponivel:
-                    canceladas = _cancelar_reservas_futuras(computador, request.user)
+                    canceladas = reservas.cancelar_futuras_da_maquina(computador, request.user)
             msg = f'Máquina {computador.identificador} atualizada com sucesso!'
             if canceladas:
                 msg += f' {canceladas} reserva(s) futura(s) cancelada(s) e usuários avisados.'
@@ -318,14 +277,14 @@ def listar_solicitacoes(request):
     is_gestor = perfil_e_gestor(request.user)
     status_filtro = request.GET.get('status', '')
 
-    solicitacoes = SolicitacaoInstalacao.objects.select_related(
+    pedidos = SolicitacaoInstalacao.objects.select_related(
         'usuario', 'computador', 'computador__laboratorio', 'laboratorio', 'atendido_por'
     )
     if not is_gestor:
-        solicitacoes = solicitacoes.filter(usuario=request.user)
+        pedidos = pedidos.filter(usuario=request.user)
 
     # Uma única query agregada no lugar dos cinco COUNT separados.
-    contagens = solicitacoes.aggregate(
+    contagens = pedidos.aggregate(
         total=Count('id'),
         pendente=Count('id', filter=Q(status='PENDENTE')),
         andamento=Count('id', filter=Q(status='EM_ANDAMENTO')),
@@ -335,10 +294,10 @@ def listar_solicitacoes(request):
     )
 
     if status_filtro in dict(SolicitacaoInstalacao.STATUS_CHOICES):
-        solicitacoes = solicitacoes.filter(status=status_filtro)
+        pedidos = pedidos.filter(status=status_filtro)
 
     return render(request, 'agendamentos/solicitacoes_list.html', {
-        'solicitacoes': _paginar(request, solicitacoes),
+        'solicitacoes': _paginar(request, pedidos),
         'is_gestor': is_gestor,
         'status_counts': contagens,
         'status_filtro': status_filtro,
@@ -352,27 +311,11 @@ def atualizar_status_solicitacao(request, solicitacao_id):
     solicitacao = get_object_or_404(SolicitacaoInstalacao, id=solicitacao_id)
     novo_status = request.POST.get('novo_status', '')
 
-    # Sem esta validação qualquer string vinda do cliente era gravada no banco.
-    if novo_status not in dict(SolicitacaoInstalacao.STATUS_CHOICES):
-        messages.error(request, 'Status inválido.')
+    try:
+        aviso = solicitacoes.atualizar_status(solicitacao, novo_status, request.user)
+    except solicitacoes.SolicitacaoRecusada as erro:
+        messages.error(request, str(erro))
         return redirect('listar_solicitacoes')
-
-    if not solicitacao.pode_mudar_para(novo_status):
-        messages.error(
-            request,
-            f'Não é possível mudar uma solicitação "{solicitacao.get_status_display()}" '
-            f'para "{dict(SolicitacaoInstalacao.STATUS_CHOICES)[novo_status]}".'
-        )
-        return redirect('listar_solicitacoes')
-
-    aviso = ''
-    with transaction.atomic():
-        solicitacao.status = novo_status
-        solicitacao.atendido_por = request.user
-        solicitacao.save(update_fields=['status', 'atendido_por', 'data_atualizacao'])
-        if novo_status == 'CONCLUIDO':
-            aviso = _registrar_instalacao_no_inventario(solicitacao)
-        emails.notificar_solicitacao_atualizada(solicitacao)
 
     messages.success(
         request,
@@ -381,41 +324,22 @@ def atualizar_status_solicitacao(request, solicitacao_id):
     return redirect('listar_solicitacoes')
 
 
-def _registrar_instalacao_no_inventario(solicitacao):
-    """Ao concluir, vincula o software à máquina solicitada, se ele existir no inventário."""
-    if not solicitacao.computador_id:
-        return ' Atualize o inventário da máquina onde o software foi instalado.'
-    nome = solicitacao.software_nome.strip().lower()
-    software = next((sw for sw in Software.objects.all() if str(sw).lower() == nome), None)
-    if software is None:
-        return ' Software não encontrado no inventário: cadastre-o e vincule à máquina.'
-    solicitacao.computador.softwares.add(software)
-    return f' "{software}" adicionado ao inventário de {solicitacao.computador.identificador}.'
-
-
 @aprovado_required
 @require_POST
 def cancelar_solicitacao(request, solicitacao_id):
     """Permite ao próprio solicitante retirar uma solicitação ainda não atendida."""
     solicitacao = get_object_or_404(SolicitacaoInstalacao, id=solicitacao_id, usuario=request.user)
 
-    if solicitacao.status != 'PENDENTE':
-        messages.error(request, 'Esta solicitação já está sendo atendida e não pode mais ser retirada.')
+    try:
+        solicitacoes.retirar(solicitacao)
+    except solicitacoes.SolicitacaoRecusada as erro:
+        messages.error(request, str(erro))
         return redirect('listar_solicitacoes')
-
-    solicitacao.status = 'CANCELADO'
-    solicitacao.save(update_fields=['status', 'data_atualizacao'])
     messages.success(request, f'Solicitação de "{solicitacao.software_nome}" retirada.')
     return redirect('listar_solicitacoes')
 
 
 # --- RESERVAS E AGENDAMENTOS ---
-
-def _reservas_do_computador(computador):
-    return Agendamento.objects.filter(
-        computador=computador, status='CONFIRMADO', data_hora_fim__gte=timezone.now()
-    ).order_by('data_hora_inicio')
-
 
 @aprovado_required
 def criar_agendamento(request, computador_id):
@@ -431,61 +355,25 @@ def criar_agendamento(request, computador_id):
     if request.method == 'POST':
         form = AgendamentoForm(request.POST)
         if form.is_valid():
-            inicio = form.cleaned_data['data_hora_inicio']
-            fim = form.cleaned_data['data_hora_fim']
-
-            # A verificação de conflito e a gravação precisam acontecer sob o
-            # mesmo lock: sem isso, duas reservas simultâneas para o mesmo
-            # horário passavam as duas pela checagem e ambas eram gravadas.
-            with transaction.atomic():
-                computador_travado = Computador.objects.select_for_update(of=('self',)).select_related('laboratorio').get(pk=computador.pk)
-                # Trava também o usuário, para serializar as checagens por usuário.
-                User.objects.select_for_update().get(pk=request.user.pk)
-
-                erro = None
-                if not computador_travado.disponivel:
-                    erro = 'Esta máquina deixou de estar disponível para reservas.'
-                elif Agendamento.objects.filter(
-                    computador=computador_travado, status='CONFIRMADO',
-                    data_hora_inicio__lt=fim, data_hora_fim__gt=inicio,
-                ).exists():
-                    erro = 'Este computador já está reservado nesse horário. Escolha outro intervalo.'
-                elif Agendamento.objects.filter(
-                    usuario=request.user, status='CONFIRMADO',
-                    data_hora_inicio__lt=fim, data_hora_fim__gt=inicio,
-                ).exists():
-                    erro = 'Você já tem outra reserva nesse mesmo horário.'
-                elif Agendamento.objects.filter(
-                    usuario=request.user, status='CONFIRMADO', data_hora_fim__gt=timezone.now(),
-                ).count() >= settings.AGENDAMENTO_MAX_RESERVAS_ATIVAS:
-                    erro = (
-                        f'Limite de {settings.AGENDAMENTO_MAX_RESERVAS_ATIVAS} reservas ativas atingido. '
-                        'Cancele ou aguarde o término de uma reserva para agendar outra.'
-                    )
-
-                if erro:
-                    messages.error(request, erro)
-                else:
-                    agendamento = form.save(commit=False)
-                    agendamento.usuario = request.user
-                    agendamento.computador = computador_travado
-                    agendamento.valor_hora_aplicado, agendamento.valor_total = agendamento.tipo.calcular_valor(
-                        inicio, fim
-                    )
-                    agendamento.save()
-                    emails.notificar_reserva_confirmada(agendamento)
-
-                    messages.success(
-                        request,
-                        f'Agendamento confirmado para {computador.identificador}! '
-                        f'Valor total: R$ {agendamento.valor_total}'
-                    )
-                    return redirect('meus_agendamentos')
+            try:
+                agendamento = reservas.reservar(
+                    request.user, computador,
+                    form.cleaned_data['tipo'], form.cleaned_data['data_hora_inicio'], form.cleaned_data['data_hora_fim'],
+                )
+            except reservas.ReservaRecusada as erro:
+                messages.error(request, str(erro))
+            else:
+                messages.success(
+                    request,
+                    f'Agendamento confirmado para {computador.identificador}! '
+                    f'Valor total: R$ {agendamento.valor_total}'
+                )
+                return redirect('meus_agendamentos')
     else:
         form = AgendamentoForm()
 
     # Calculado depois do POST para refletir reservas feitas por outros enquanto o form era preenchido.
-    reservas_existentes = _reservas_do_computador(computador)
+    reservas_existentes = reservas.reservas_futuras_da_maquina(computador)
     reservas_json = [
         {
             'from': timezone.localtime(r.data_hora_inicio).strftime('%Y-%m-%d %H:%M'),
@@ -494,12 +382,10 @@ def criar_agendamento(request, computador_id):
         for r in reservas_existentes
     ]
 
-    taxas = {str(t.pk): str(t.taxa_hora()) for t in TipoAgendamento.objects.filter(ativo=True)}
-    duracoes = {str(t.pk): t.duracao_maxima() for t in TipoAgendamento.objects.filter(ativo=True)}
-
+    tipos_ativos = TipoAgendamento.objects.filter(ativo=True)
     return render(request, 'agendamentos/agendar.html', {
-        'taxas_json': taxas,
-        'duracoes_json': duracoes,
+        'taxas_json': {str(t.pk): str(t.taxa_hora()) for t in tipos_ativos},
+        'duracoes_json': {str(t.pk): t.duracao_maxima() for t in tipos_ativos},
         'form': form,
         'computador': computador,
         'reservas_existentes': reservas_existentes,
@@ -514,16 +400,14 @@ def meus_agendamentos(request):
 
     proximos = base.filter(status='CONFIRMADO', data_hora_fim__gte=agora).order_by('data_hora_inicio')
     historico = base.filter(Q(status='CANCELADO') | Q(data_hora_fim__lt=agora)).order_by('-data_hora_inicio')
-
-    confirmadas = base.filter(status='CONFIRMADO')
-    total_gasto = confirmadas.filter(data_hora_fim__lte=agora).aggregate(t=Sum('valor_total'))['t'] or Decimal('0.00')
-    total_previsto = confirmadas.filter(data_hora_fim__gt=agora).aggregate(t=Sum('valor_total'))['t'] or Decimal('0.00')
+    totais = financeiro.totais_do_usuario(request.user, agora)
 
     return render(request, 'agendamentos/meus_agendamentos.html', {
         'proximos': proximos,
         'historico': _paginar(request, historico),
-        'total_gasto': total_gasto,
-        'total_previsto': total_previsto,
+        'total_gasto': totais['gasto'],
+        'total_previsto': totais['previsto'],
+        'total_a_pagar': totais['a_pagar'],
         'agora': agora,
     })
 
@@ -563,143 +447,68 @@ def gerenciar_agendamentos(request):
     })
 
 
-def _parse_data(valor):
-    try:
-        return datetime.strptime(valor, '%Y-%m-%d').date()
-    except (TypeError, ValueError):
-        return None
-
-
 @admin_required
 def dashboard_financeiro(request):
-    agora = timezone.now()
-    de = _parse_data(request.GET.get('de'))
-    ate = _parse_data(request.GET.get('ate'))
+    de = financeiro.parse_data(request.GET.get('de'))
+    ate = financeiro.parse_data(request.GET.get('ate'))
     lab_id = request.GET.get('laboratorio', '')
 
-    # Período aplicado sobre o início da reserva, no fuso local.
-    def periodo_q(prefixo=''):
-        q = Q()
-        if de:
-            q &= Q(**{f'{prefixo}data_hora_inicio__date__gte': de})
-        if ate:
-            q &= Q(**{f'{prefixo}data_hora_inicio__date__lte': ate})
-        return q
-
-    confirmado = Q(status='CONFIRMADO')
-    realizada_q = confirmado & Q(data_hora_fim__lte=agora)
-    prevista_q = confirmado & Q(data_hora_fim__gt=agora)
-
-    base = Agendamento.objects.filter(periodo_q())
-    if lab_id.isdigit():
-        base = base.filter(computador__laboratorio_id=lab_id)
-
-    totais = base.aggregate(
-        realizada=Sum('valor_total', filter=realizada_q),
-        prevista=Sum('valor_total', filter=prevista_q),
-        cancelado=Sum('valor_total', filter=Q(status='CANCELADO')),
-        reservas=Count('id', filter=confirmado),
-        canceladas=Count('id', filter=Q(status='CANCELADO')),
-        duracao=Sum(
-            ExpressionWrapper(F('data_hora_fim') - F('data_hora_inicio'), output_field=DurationField()),
-            filter=confirmado,
-        ),
-    )
-    zero = Decimal('0.00')
-    receita_realizada = totais['realizada'] or zero
-    receita_prevista = totais['prevista'] or zero
-    total_geral = receita_realizada + receita_prevista
-    total_reservas = totais['reservas'] or 0
-    total_canceladas = totais['canceladas'] or 0
-    horas_reservadas = round(totais['duracao'].total_seconds() / 3600, 1) if totais['duracao'] else 0
-    ticket_medio = (total_geral / total_reservas).quantize(Decimal('0.01')) if total_reservas else zero
-    solicitadas = total_reservas + total_canceladas
-    taxa_cancelamento = round(100 * total_canceladas / solicitadas, 1) if solicitadas else 0
-
-    ag = 'computadores__agendamentos__'
-    periodo_lab = periodo_q(ag)
-    por_lab = Laboratorio.objects.annotate(
-        maquinas=Count('computadores', distinct=True),
-        agendamentos=Count(f'{ag}id', filter=periodo_lab & Q(**{f'{ag}status': 'CONFIRMADO'}), distinct=True),
-        receita=Sum(f'{ag}valor_total', filter=periodo_lab & Q(**{f'{ag}status': 'CONFIRMADO'})),
-    ).order_by('nome')
-    if lab_id.isdigit():
-        por_lab = por_lab.filter(id=lab_id)
-
-    ag_pc = 'agendamentos__'
-    maquinas = Computador.objects.select_related('laboratorio').annotate(
-        total_agendamentos=Count(f'{ag_pc}id', filter=periodo_q(ag_pc) & Q(**{f'{ag_pc}status': 'CONFIRMADO'})),
-        receita=Sum(f'{ag_pc}valor_total', filter=periodo_q(ag_pc) & Q(**{f'{ag_pc}status': 'CONFIRMADO'})),
-    ).order_by(F('receita').desc(nulls_last=True), 'laboratorio__nome', 'identificador')
-    if lab_id.isdigit():
-        maquinas = maquinas.filter(laboratorio_id=lab_id)
-
-    confirmados = base.filter(confirmado)
-    por_finalidade = list(
-        confirmados.values('tipo__nome').annotate(total=Count('id'), receita=Sum('valor_total')).order_by('-total')
-    )
-    for linha in por_finalidade:
-        linha['rotulo'] = linha['tipo__nome']
-
-    por_mes = list(
-        confirmados.annotate(mes=TruncMonth('data_hora_inicio'))
-        .values('mes').annotate(total=Count('id'), receita=Sum('valor_total')).order_by('-mes')[:12]
-    )
-
-    return render(request, 'agendamentos/dashboard_financeiro.html', {
-        'summary': por_lab,
-        'maquinas': maquinas,
-        'total_geral': total_geral,
-        'receita_realizada': receita_realizada,
-        'receita_prevista': receita_prevista,
-        'valor_cancelado': totais['cancelado'] or zero,
-        'total_reservas': total_reservas,
-        'total_canceladas': total_canceladas,
-        'taxa_cancelamento': taxa_cancelamento,
-        'ticket_medio': ticket_medio,
-        'horas_reservadas': horas_reservadas,
-        'por_finalidade': por_finalidade,
-        'por_mes': por_mes,
+    contexto = financeiro.dashboard(de, ate, lab_id)
+    contexto.update({
         'laboratorios': Laboratorio.objects.all(),
         'de': de.isoformat() if de else '',
         'ate': ate.isoformat() if ate else '',
         'lab_id': lab_id,
     })
+    return render(request, 'agendamentos/dashboard_financeiro.html', contexto)
 
 
 @aprovado_required
 @require_POST
 def cancelar_agendamento(request, agendamento_id):
-    """Cancela uma reserva.
-
-    Era uma view GET acessível por link, o que a tornava disparável por
-    CSRF (bastava fazer a vítima carregar a URL). Agora exige POST com token.
-    """
+    """Cancela uma reserva. Exige POST com token CSRF (antes era um link GET)."""
     agendamento = get_object_or_404(
         Agendamento.objects.select_related('computador', 'usuario'), id=agendamento_id
     )
     destino = 'gerenciar_agendamentos' if request.POST.get('origem') == 'admin' else 'meus_agendamentos'
 
-    if agendamento.usuario_id != request.user.id and not perfil_e_admin(request.user):
-        messages.error(request, 'Você não tem permissão para cancelar este agendamento.')
-        return redirect('meus_agendamentos')
+    try:
+        reservas.cancelar(agendamento, request.user)
+    except reservas.CancelamentoRecusado as erro:
+        messages.error(request, str(erro))
+        return redirect('meus_agendamentos' if erro.sem_permissao else destino)
 
-    if not agendamento.pode_ser_cancelado_por(request.user):
-        if agendamento.status == 'CANCELADO':
-            messages.error(request, 'Este agendamento já estava cancelado.')
-        else:
-            messages.error(request, 'Reservas que já terminaram não podem ser canceladas.')
-        return redirect(destino)
-
-    agendamento.cancelar(request.user)
-    if agendamento.usuario_id != request.user.id:
-        emails.notificar_reserva_cancelada(agendamento, 'cancelada pela administração.')
-    messages.success(
-        request,
+    texto = (
         f'Reserva de {agendamento.computador.identificador} '
         f'({timezone.localtime(agendamento.data_hora_inicio).strftime("%d/%m/%Y %H:%M")}) cancelada.'
     )
+    if agendamento.multa > 0:
+        texto += f' Multa por cancelamento fora do prazo: R$ {agendamento.multa}.'
+    messages.success(request, texto)
     return redirect(destino)
+
+
+def _registrar_cobranca(request, agendamento_id, operacao, sucesso):
+    agendamento = get_object_or_404(Agendamento.objects.select_related('computador', 'usuario'), id=agendamento_id)
+    try:
+        operacao(agendamento, request.user)
+    except pagamentos.PagamentoRecusado as erro:
+        messages.error(request, str(erro))
+    else:
+        messages.success(request, sucesso)
+    return redirect('gerenciar_agendamentos')
+
+
+@admin_required
+@require_POST
+def registrar_pagamento(request, agendamento_id):
+    return _registrar_cobranca(request, agendamento_id, pagamentos.registrar_pagamento, 'Pagamento registrado.')
+
+
+@admin_required
+@require_POST
+def registrar_estorno(request, agendamento_id):
+    return _registrar_cobranca(request, agendamento_id, pagamentos.registrar_estorno, 'Estorno registrado.')
 
 
 # --- GERENCIAMENTO DE USUÁRIOS E PERMISSÕES ---
@@ -740,10 +549,10 @@ def revogar_usuario(request, perfil_id):
 @admin_required
 def gerenciar_usuarios(request):
     busca = request.GET.get('busca', '').strip()
-    usuarios = User.objects.select_related('perfil').order_by('-date_joined')
+    lista = User.objects.select_related('perfil').order_by('-date_joined')
 
     if busca:
-        usuarios = usuarios.filter(
+        lista = lista.filter(
             Q(username__icontains=busca) |
             Q(email__icontains=busca) |
             Q(first_name__icontains=busca) |
@@ -751,7 +560,7 @@ def gerenciar_usuarios(request):
         )
 
     return render(request, 'agendamentos/gerenciar_usuarios.html', {
-        'usuarios': _paginar(request, usuarios),
+        'usuarios': _paginar(request, lista),
         'busca': busca,
     })
 
@@ -760,8 +569,9 @@ def gerenciar_usuarios(request):
 def editar_usuario(request, user_id):
     usuario_obj = get_object_or_404(User, id=user_id)
 
-    if usuario_obj.is_superuser and not request.user.is_superuser:
-        messages.error(request, 'Apenas um superusuário pode editar outro superusuário.')
+    erro = usuarios.erro_superusuario(request.user, usuario_obj, 'editar')
+    if erro:
+        messages.error(request, erro)
         return redirect('gerenciar_usuarios')
 
     perfil, _ = Perfil.objects.get_or_create(usuario=usuario_obj)
@@ -796,23 +606,11 @@ def editar_usuario(request, user_id):
 def deletar_usuario(request, user_id):
     usuario_obj = get_object_or_404(User, id=user_id)
 
-    if usuario_obj.id == request.user.id:
-        messages.error(request, 'Você não pode excluir sua própria conta.')
-        return redirect('gerenciar_usuarios')
-
-    if usuario_obj.is_superuser and not request.user.is_superuser:
-        messages.error(request, 'Apenas um superusuário pode excluir outro superusuário.')
-        return redirect('gerenciar_usuarios')
-
     username = usuario_obj.username
     try:
-        usuario_obj.delete()
-    except ProtectedError:
-        messages.error(
-            request,
-            f'{username} possui reservas no histórico financeiro e não pode ser excluído. '
-            'Revogue o acesso em vez de excluir.'
-        )
+        usuarios.excluir(request.user, usuario_obj)
+    except usuarios.ExclusaoRecusada as erro:
+        messages.error(request, str(erro))
         return redirect('gerenciar_usuarios')
     messages.success(request, f'Usuário {username} removido com sucesso.')
     return redirect('gerenciar_usuarios')
@@ -845,8 +643,9 @@ def resetar_senha_usuario(request, user_id):
     """
     usuario_obj = get_object_or_404(User, id=user_id)
 
-    if usuario_obj.is_superuser and not request.user.is_superuser:
-        messages.error(request, 'Apenas um superusuário pode redefinir a senha de outro superusuário.')
+    erro = usuarios.erro_superusuario(request.user, usuario_obj, 'redefinir a senha de')
+    if erro:
+        messages.error(request, erro)
         return redirect('gerenciar_usuarios')
 
     if request.method == 'POST':

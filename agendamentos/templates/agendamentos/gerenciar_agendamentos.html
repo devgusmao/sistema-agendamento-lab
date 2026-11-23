@@ -33,6 +33,17 @@
     .status-cancelado { background-color: var(--danger-bg); color: var(--danger-text); }
     .status-encerrado { background-color: #f1f5f9; color: #475569; }
 
+    .pg-pendente { background-color: #fef3c7; color: #92400e; }
+    .pg-pago { background-color: var(--success-bg); color: var(--success-text); }
+    .pg-estornado { background-color: var(--info-bg); color: var(--info-text); }
+    .pg-isento { background-color: #f1f5f9; color: #475569; }
+    .pg-detalhe { display: block; font-size: 0.76rem; color: var(--muted-text); margin-top: 0.2rem; }
+    .acoes { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .btn-pagar { background-color: #16a34a; color: white; padding: 0.4rem 0.8rem; border-radius: 6px; border: none; font-weight: 600; font-size: 0.8rem; cursor: pointer; }
+    .btn-pagar:hover { background-color: #15803d; }
+    .btn-estorno { background-color: #2563eb; }
+    .btn-estorno:hover { background-color: #1d4ed8; }
+
     .user-info-text { font-weight: 600; color: #0f172a; }
     .user-email-text { font-size: 0.8rem; color: var(--muted-text); display: block; }
 
@@ -91,6 +102,7 @@
                     <th>Finalidade</th>
                     <th>Valor</th>
                     <th>Status</th>
+                    <th>Pagamento</th>
                     <th>Ações</th>
                 </tr>
             </thead>
@@ -119,16 +131,39 @@
                             {% endif %}
                         </td>
                         <td>
+                            <span class="badge-status pg-{{ a.status_pagamento|lower }}">{{ a.get_status_pagamento_display }}</span>
+                            {% if a.multa > 0 %}<span class="pg-detalhe">Multa: R$ {{ a.multa|floatformat:2 }}</span>{% endif %}
+                            {% if a.status_pagamento == 'PAGO' or a.status_pagamento == 'ESTORNADO' %}
+                                <span class="pg-detalhe">Pago: R$ {{ a.valor_pago|floatformat:2 }}</span>
+                            {% endif %}
+                            {% if a.valor_estornado > 0 %}<span class="pg-detalhe">Estornado: R$ {{ a.valor_estornado|floatformat:2 }}</span>{% endif %}
+                            {% if a.estorno_pendente > 0 %}<span class="pg-detalhe"><strong>Devolver: R$ {{ a.estorno_pendente|floatformat:2 }}</strong></span>{% endif %}
+                        </td>
+                        <td>
+                            <div class="acoes">
+                            {% if a.status_pagamento == 'PENDENTE' and a.valor_devido > 0 %}
+                                <form method="post" action="{% url 'registrar_pagamento' a.id %}" class="btn-inline-form"
+                                      onsubmit="return confirm('Confirmar o recebimento de R$ {{ a.valor_devido|floatformat:2 }} de {{ a.usuario.username|escapejs }}?')">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-pagar">Registrar pagamento</button>
+                                </form>
+                            {% endif %}
+                            {% if a.estorno_pendente > 0 %}
+                                <form method="post" action="{% url 'registrar_estorno' a.id %}" class="btn-inline-form"
+                                      onsubmit="return confirm('Confirmar a devolução de R$ {{ a.estorno_pendente|floatformat:2 }} para {{ a.usuario.username|escapejs }}?')">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-pagar btn-estorno">Registrar estorno</button>
+                                </form>
+                            {% endif %}
                             {% if a.status == 'CONFIRMADO' and a.data_hora_fim >= agora %}
                                 <form method="post" action="{% url 'cancelar_agendamento' a.id %}" class="btn-inline-form"
-                                      onsubmit="return confirm('Cancelar a reserva de {{ a.usuario.username|escapejs }}?')">
+                                      onsubmit="return confirm('Cancelar a reserva de {{ a.usuario.username|escapejs }}? Cancelamento pela administração não gera multa.')">
                                     {% csrf_token %}
                                     <input type="hidden" name="origem" value="admin">
                                     <button type="submit" class="btn-cancelar">Cancelar</button>
                                 </form>
-                            {% else %}
-                                <span style="color:#94a3b8;">—</span>
                             {% endif %}
+                            </div>
                         </td>
                     </tr>
                 {% endfor %}

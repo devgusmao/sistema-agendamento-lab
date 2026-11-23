@@ -30,6 +30,8 @@ código.
 | Contas não aprovadas bloqueadas em todas as telas de uso | `agendamentos/decorators.py` |
 | Status e tipos de perfil validados contra `*_CHOICES` | `agendamentos/views.py` |
 | Administrador não consegue se rebaixar nem se excluir (anti-lockout) | `agendamentos/views.py` |
+| Cancelamento, pagamento e estorno relêem a reserva sob `select_for_update` (sem sobrescrita em operações simultâneas) | `agendamentos/servicos/` |
+| Registro de pagamento e estorno só por administrador, via `POST` + CSRF | `agendamentos/views.py` |
 | Reserva criada sob `select_for_update` (evita corrida de sobreposição) | `agendamentos/views.py` |
 | `.env` fora da imagem Docker | `.dockerignore` |
 
@@ -48,8 +50,6 @@ código.
 
 Itens identificados e ainda **não** implementados:
 
-- **Sem limite de tentativas de login.** Não há proteção contra força bruta na
-  tela de autenticação. Recomenda-se `django-axes` ou limitação no proxy reverso.
 - **Enumeração de e-mail no cadastro.** A mensagem "este e-mail já está
   cadastrado" confirma a existência de uma conta. É um requisito funcional da
   tela, mas vale avaliar a troca por confirmação por e-mail.

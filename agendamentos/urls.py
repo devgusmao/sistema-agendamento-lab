@@ -42,6 +42,8 @@ urlpatterns = [
     path('meus-agendamentos/', views.meus_agendamentos, name='meus_agendamentos'),
     path('agendamentos/<int:agendamento_id>/cancelar/', views.cancelar_agendamento, name='cancelar_agendamento'),
     path('gestao/agendamentos/', views.gerenciar_agendamentos, name='gerenciar_agendamentos'),
+    path('gestao/agendamentos/<int:agendamento_id>/pagamento/', views.registrar_pagamento, name='registrar_pagamento'),
+    path('gestao/agendamentos/<int:agendamento_id>/estorno/', views.registrar_estorno, name='registrar_estorno'),
     path('gestao/dashboard/', views.dashboard_financeiro, name='dashboard_financeiro'),
 
     # --- TIPOS DE AGENDAMENTO E PREÇOS ---

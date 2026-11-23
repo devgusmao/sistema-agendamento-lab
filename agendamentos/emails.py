@@ -32,8 +32,8 @@ EVENTOS = {
         'Dono da reserva', True),
     'lembrete_reserva': Evento(
         'Lembrete de reserva',
-        f'Enviado algumas horas antes do início da reserva (configurável, padrão 2 h). '
-        f'Exige agendar o comando "enviar_lembretes" no servidor.',
+        'Enviado algumas horas antes do início da reserva (configurável, padrão 2 h). '
+        'Exige agendar o comando "enviar_lembretes" no servidor.',
         'Dono da reserva', True),
     'novo_cadastro': Evento(
         'Novo cadastro aguardando aprovação',

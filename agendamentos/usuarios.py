@@ -5,8 +5,37 @@ gravavam os mesmos campos com regras de proteção duplicadas e divergentes.
 Toda mudança passa por `erro_ao_alterar` + `aplicar`.
 """
 
+from django.db.models.deletion import ProtectedError
+
 from . import emails
 from .models import Perfil
+
+
+class ExclusaoRecusada(Exception):
+    """Usuário não pode ser excluído; a mensagem é exibida ao administrador."""
+
+
+def erro_superusuario(ator, alvo, acao):
+    """Só um superusuário mexe em outro superusuário. `acao` completa a frase ('editar', 'excluir'...)."""
+    if alvo.is_superuser and not ator.is_superuser:
+        return f'Apenas um superusuário pode {acao} outro superusuário.'
+    return None
+
+
+def excluir(ator, alvo):
+    """Exclui o usuário ou levanta `ExclusaoRecusada`. Quem tem reservas fica no histórico financeiro."""
+    if alvo.id == ator.id:
+        raise ExclusaoRecusada('Você não pode excluir sua própria conta.')
+    erro = erro_superusuario(ator, alvo, 'excluir')
+    if erro:
+        raise ExclusaoRecusada(erro)
+    try:
+        alvo.delete()
+    except ProtectedError:
+        raise ExclusaoRecusada(
+            f'{alvo.username} possui reservas no histórico financeiro e não pode ser excluído. '
+            'Revogue o acesso em vez de excluir.'
+        )
 
 
 def erro_ao_alterar(ator, alvo, *, tipo=None, aprovado=None):

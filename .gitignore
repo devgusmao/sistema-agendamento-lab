@@ -20,3 +20,8 @@ staticfiles/
 .vscode/
 .idea/
 .claude/
+# Material de apresentação (local)
+apresentação/
+
+# Material da disciplina (local)
+Documentação/Arquivos da materia/
