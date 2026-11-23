@@ -333,6 +333,23 @@ class RedefinirSenhaTests(TestCase):
         self.assertIn('no-store', self.client.get(reverse('esqueci_senha'))['Cache-Control'])
         self.assertIn('no-store', self.client.get(caminho)['Cache-Control'])
 
+    def test_formularios_nao_usam_referrer_no_referrer(self):
+        """`no-referrer` faz o navegador enviar `Origin: null` no POST e o CSRF recusa o formulário."""
+        caminho = self._link()
+        pagina_senha = self.client.get(self.client.get(caminho).url)
+        for resposta in (self.client.get(reverse('esqueci_senha')), pagina_senha):
+            self.assertNotContains(resposta, 'no-referrer')
+            self.assertEqual(resposta['Referrer-Policy'], 'same-origin')
+
+    def test_post_com_origem_do_proprio_site_passa_na_verificacao_csrf(self):
+        from django.test import Client
+        cliente = Client(enforce_csrf_checks=True)
+        pagina = cliente.get(reverse('esqueci_senha'))
+        token = re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', pagina.content.decode()).group(1)
+        resp = cliente.post(reverse('esqueci_senha'), {'email': 'joao@example.com', 'csrfmiddlewaretoken': token},
+                            HTTP_ORIGIN='http://testserver')
+        self.assertEqual(resp.status_code, 302)
+
     @override_settings(SITE_URL='https://lab.exemplo.com.br', ALLOWED_HOSTS=['testserver', 'evil.example.com'])
     def test_link_usa_site_url_e_nao_o_cabecalho_host(self):
         with self.captureOnCommitCallbacks(execute=True):
