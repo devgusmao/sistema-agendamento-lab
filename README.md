@@ -47,13 +47,28 @@ Para desenvolvimento, com código montado do host e recarga automática:
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
-### E-mail (opcional)
+### E-mail e notificações
 
-Para enviar e-mails de confirmação e cancelamento de reservas via Gmail, preencha
-`EMAIL_HOST_USER` e `EMAIL_HOST_PASSWORD` no `.env` (use uma *senha de app* do
-Google, nunca a senha da conta). Sem essas variáveis, as mensagens são apenas
-impressas no log. As regras de agendamento (duração, blocos, limite de reservas
-e horário de funcionamento) também são ajustáveis pelo `.env`; veja o `.env.example`.
+A conta Gmail que envia as notificações é configurada **pela tela de administração**
+(menu "E-mail (Gmail)"): informe a conta e a *senha de app* do Google (nunca a senha
+da conta). A senha é guardada cifrada no banco e não volta para a tela; há um botão
+de teste. Alternativa: `EMAIL_HOST_USER` e `EMAIL_HOST_PASSWORD` no `.env`, usadas
+quando nada foi salvo na tela. Sem nenhuma das duas, as mensagens só aparecem no log.
+
+O menu "Notificações" lista tudo o que o sistema avisa (reserva confirmada/cancelada,
+lembrete, novo cadastro, cadastro aprovado, acesso revogado, senha redefinida e
+solicitações de software), permite ligar/desligar cada evento e mostra o histórico de
+envios (sem guardar endereços de e-mail).
+
+**Lembretes de reserva** exigem agendar o comando abaixo no servidor (ex.: a cada 15 min):
+
+```bash
+*/15 * * * * docker compose exec -T web python manage.py enviar_lembretes
+```
+
+A antecedência é `AGENDAMENTO_LEMBRETE_HORAS` (padrão 2). As regras de agendamento
+(duração, blocos, limite de reservas e horário) também são ajustáveis pelo `.env`;
+veja o `.env.example`.
 
 ### Comandos úteis
 
@@ -75,7 +90,7 @@ administrador antes de conseguir usar o sistema.
 | :-- | :-- |
 | **Aluno / Comunidade** | Reservar máquinas, cancelar as próprias reservas, solicitar instalação de software e acompanhar os próprios pedidos |
 | **Técnico** | Tudo do Aluno, mais: gerenciar laboratórios, máquinas, inventário de softwares e atender solicitações de instalação |
-| **Administrador** | Tudo do Técnico, mais: aprovar/revogar usuários, alterar permissões, ver e cancelar todas as reservas e acessar o dashboard financeiro |
+| **Administrador** | Tudo do Técnico, mais: aprovar/revogar e gerenciar usuários, configurar e-mail e notificações, ver e cancelar todas as reservas e acessar o dashboard financeiro |
 | **Superusuário** | Administrador + painel `/admin` do Django |
 
 ---
@@ -103,7 +118,8 @@ administrador antes de conseguir usar o sistema.
 ### Gestão
 - CRUD de laboratórios, máquinas e inventário de softwares.
 - Aprovação e revogação de acesso de usuários.
-- Edição de usuários e alteração de nível de permissão.
+- Edição de usuários, tipo de perfil e acesso em um só lugar (Gerenciar Usuários). Só superusuários promovem a administrador ou rebaixam/revogam administradores.
+- Notificações por e-mail configuráveis, com histórico, e tela para configurar o Gmail.
 - Gestão global de reservas com filtros por usuário, status e período.
 - Dashboard financeiro: receita por laboratório e por máquina, total de horas
   reservadas e distribuição por tipo de agendamento.
@@ -228,7 +244,7 @@ sistema-agendamento-lab/
 ## 🧭 Próximos passos
 
 - [x] Limite de tentativas de login (django-axes: 5 falhas → bloqueio de 15 min por usuário+IP; ajustável no `.env`).
-- [ ] Notificação por e-mail na aprovação de cadastro e na conclusão de solicitações (reservas já notificam).
+- [x] Notificações por e-mail (aprovação, solicitações, lembretes) com liga/desliga e histórico.
 - [ ] Registro de pagamento, multa de cancelamento e estorno.
 - [ ] Check-in/check-out e controle de não comparecimento.
 - [ ] Relatórios de ocupação e comportamento de uso.

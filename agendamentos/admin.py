@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Agendamento, Computador, Laboratorio, Perfil, Software, SolicitacaoInstalacao, TipoAgendamento
+from .models import Agendamento, Computador, LogNotificacao, Laboratorio, Perfil, Software, SolicitacaoInstalacao, TipoAgendamento
 
 
 @admin.register(Perfil)
@@ -52,3 +52,10 @@ class SolicitacaoInstalacaoAdmin(admin.ModelAdmin):
 class TipoAgendamentoAdmin(admin.ModelAdmin):
     list_display = ('nome', 'modo', 'valor_hora', 'ativo', 'ordem')
     list_filter = ('modo', 'ativo')
+
+
+@admin.register(LogNotificacao)
+class LogNotificacaoAdmin(admin.ModelAdmin):
+    list_display = ('criado_em', 'evento', 'usuario', 'status', 'erro')
+    list_filter = ('evento', 'status')
+    readonly_fields = ('criado_em',)

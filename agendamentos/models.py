@@ -180,6 +180,7 @@ class Agendamento(models.Model):
     cancelado_por = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name='agendamentos_cancelados'
     )
+    lembrete_enviado_em = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['-data_hora_inicio']
@@ -266,6 +267,72 @@ class SolicitacaoInstalacao(models.Model):
 
     def __str__(self):
         return f"Solicitação: {self.software_nome} para {self.destino_display()}"
+
+
+# --- E-mail e notificações ---
+
+class ConfiguracaoEmail(models.Model):
+    """Credenciais SMTP (Gmail) editáveis pela tela de administração. Registro único.
+
+    A senha de app fica cifrada (ver `seguranca.py`) e nunca é exibida de volta.
+    Sem usuário/senha aqui, o sistema usa as variáveis do .env.
+    """
+
+    usuario = models.EmailField('Conta Gmail (remetente)', blank=True)
+    nome_remetente = models.CharField('Nome exibido', max_length=80, blank=True, default='Agendamento Lab')
+    senha_cifrada = models.TextField(blank=True)
+    host = models.CharField(max_length=100, default='smtp.gmail.com')
+    porta = models.PositiveIntegerField(default=587)
+    usar_tls = models.BooleanField('Usar TLS', default=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+    atualizado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+
+    @classmethod
+    def obter(cls):
+        return cls.objects.get_or_create(pk=1)[0]
+
+    @property
+    def senha(self):
+        from .seguranca import decifrar
+        return decifrar(self.senha_cifrada)
+
+    def definir_senha(self, senha):
+        from .seguranca import cifrar
+        self.senha_cifrada = cifrar(senha)
+
+    @property
+    def configurada(self):
+        return bool(self.usuario and self.senha)
+
+    def __str__(self):
+        return f'E-mail de envio: {self.usuario or "(usa .env)"}'
+
+
+class ConfiguracaoNotificacao(models.Model):
+    """Liga/desliga de cada evento do catálogo (ver `emails.EVENTOS`). Sem registro = padrão do evento."""
+
+    evento = models.CharField(max_length=50, unique=True)
+    ativo = models.BooleanField(default=True)
+
+
+class LogNotificacao(models.Model):
+    """Histórico de envios. Guarda o usuário, nunca o endereço de e-mail (LGPD)."""
+
+    STATUS_CHOICES = [
+        ('ENVIADO', 'Enviado'),
+        ('FALHA', 'Falha'),
+        ('DESATIVADO', 'Desativado'),
+        ('SEM_EMAIL', 'Usuário sem e-mail'),
+    ]
+
+    evento = models.CharField(max_length=50)
+    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES)
+    erro = models.CharField(max_length=200, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-criado_em']
 
 
 # --- Helpers de papel (uma única fonte de verdade para as checagens de acesso) ---

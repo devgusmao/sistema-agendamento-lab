@@ -58,5 +58,7 @@ urlpatterns = [
     path('gestao/usuarios/<int:user_id>/editar/', views.editar_usuario, name='editar_usuario'),
     path('gestao/usuarios/<int:user_id>/resetar-senha/', views.resetar_senha_usuario, name='resetar_senha_usuario'),
     path('gestao/usuarios/<int:user_id>/excluir/', views.deletar_usuario, name='deletar_usuario'),
-    path('permissoes/', views.permissoes_acesso, name='permissoes_acesso'),
+    path('gestao/notificacoes/', views.notificacoes, name='notificacoes'),
+    path('gestao/email/', views.configurar_email, name='configurar_email'),
+    path('gestao/email/testar/', views.testar_email, name='testar_email'),
 ]

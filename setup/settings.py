@@ -175,6 +175,8 @@ AGENDAMENTO_MAX_RESERVAS_ATIVAS = config('AGENDAMENTO_MAX_RESERVAS_ATIVAS', defa
 AGENDAMENTO_HORA_ABERTURA = config('AGENDAMENTO_HORA_ABERTURA', default=0, cast=int)
 AGENDAMENTO_HORA_FECHAMENTO = config('AGENDAMENTO_HORA_FECHAMENTO', default=24, cast=int)
 
+AGENDAMENTO_LEMBRETE_HORAS = config('AGENDAMENTO_LEMBRETE_HORAS', default=2, cast=int)
+
 # --- E-mail (Gmail via SMTP) ---
 # Sem EMAIL_HOST_USER, os e-mails são apenas impressos no console (modo dev).
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
