@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from .. import emails
 from ..models import Agendamento, Computador, perfil_e_admin
+from .financeiro import totais_do_usuario
 from .precos import calcular_multa
 
 
@@ -28,9 +29,27 @@ def reservas_futuras_da_maquina(computador):
     ).order_by('data_hora_inicio')
 
 
+def _divida_que_bloqueia(usuario):
+    """Valor em aberto se ele passa do limite configurado; None se pode reservar.
+
+    Administradores não são bloqueados; limite negativo desliga a regra.
+    """
+    limite = settings.AGENDAMENTO_LIMITE_DIVIDA
+    if limite < 0 or perfil_e_admin(usuario):
+        return None
+    a_pagar = totais_do_usuario(usuario)['a_pagar']
+    return a_pagar if a_pagar > limite else None
+
+
 def _motivo_de_recusa(usuario, computador, inicio, fim):
     """Primeira regra violada ou None. Deve rodar sob as travas de `reservar`."""
     confirmadas = Agendamento.objects.filter(status='CONFIRMADO')
+    divida = _divida_que_bloqueia(usuario)
+    if divida is not None:
+        return (
+            f'Você tem R$ {divida:.2f} em aberto (uso e multas). '
+            'Regularize o pagamento com a administração para fazer novas reservas.'
+        )
     if not computador.disponivel:
         return 'Esta máquina deixou de estar disponível para reservas.'
     if confirmadas.filter(computador=computador, data_hora_inicio__lt=fim, data_hora_fim__gt=inicio).exists():

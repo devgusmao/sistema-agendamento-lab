@@ -408,3 +408,45 @@ class ServicoUsuariosTests(TestCase):
         with self.assertRaisesMessage(usuarios.ExclusaoRecusada, 'histórico financeiro'):
             usuarios.excluir(self.admin, self.alvo)
         self.assertTrue(User.objects.filter(pk=self.alvo.pk).exists())
+
+
+class BloqueioPorDividaTests(BaseFinanceira):
+    """Quem deve (multa ou uso pendente) não faz novas reservas até regularizar."""
+
+    def _com_multa_pendente(self, usuario, valor='55.00'):
+        inicio = proximo_bloco(timedelta(days=-2))
+        return Agendamento.objects.create(
+            usuario=usuario, computador=self.pc, tipo=TipoAgendamento.objects.get(pk=id_tipo('Estudo')),
+            data_hora_inicio=inicio, data_hora_fim=inicio + timedelta(hours=1),
+            status='CANCELADO', multa=Decimal(valor), status_pagamento='PENDENTE',
+        )
+
+    def _reservar(self, usuario):
+        tipo = TipoAgendamento.objects.get(pk=id_tipo('Estudo'))
+        inicio = proximo_bloco(timedelta(days=3))
+        return reservas.reservar(usuario, self.pc, tipo, inicio, inicio + timedelta(hours=1))
+
+    def test_multa_pendente_bloqueia_nova_reserva(self):
+        self._com_multa_pendente(self.aluno)
+        with self.assertRaisesMessage(reservas.ReservaRecusada, 'R$ 55.00 em aberto'):
+            self._reservar(self.aluno)
+
+    def test_multa_paga_libera(self):
+        ag = self._com_multa_pendente(self.aluno)
+        Agendamento.objects.filter(pk=ag.pk).update(status_pagamento='PAGO')
+        self.assertEqual(self._reservar(self.aluno).status, 'CONFIRMADO')
+
+    @override_settings(AGENDAMENTO_LIMITE_DIVIDA=100)
+    def test_divida_dentro_do_limite_nao_bloqueia(self):
+        self._com_multa_pendente(self.aluno)
+        self.assertEqual(self._reservar(self.aluno).status, 'CONFIRMADO')
+
+    @override_settings(AGENDAMENTO_LIMITE_DIVIDA=-1)
+    def test_limite_negativo_desliga_bloqueio(self):
+        self._com_multa_pendente(self.aluno)
+        self.assertEqual(self._reservar(self.aluno).status, 'CONFIRMADO')
+
+    def test_administrador_nao_e_bloqueado(self):
+        admin = criar_usuario('admin_deve', tipo='ADMIN')
+        self._com_multa_pendente(admin)
+        self.assertEqual(self._reservar(admin).status, 'CONFIRMADO')

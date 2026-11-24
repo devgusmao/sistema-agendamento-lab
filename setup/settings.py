@@ -187,6 +187,10 @@ AGENDAMENTO_LEMBRETE_HORAS = config('AGENDAMENTO_LEMBRETE_HORAS', default=2, cas
 AGENDAMENTO_MULTA_HORAS = config('AGENDAMENTO_MULTA_HORAS', default=24, cast=int)
 AGENDAMENTO_MULTA_PERCENTUAL = config('AGENDAMENTO_MULTA_PERCENTUAL', default=50, cast=int)
 
+# Bloqueia novas reservas de quem deve (uso + multas pendentes) mais que este valor, em R$.
+# 0 = qualquer dívida bloqueia; negativo = desligado. Administradores não são bloqueados.
+AGENDAMENTO_LIMITE_DIVIDA = config('AGENDAMENTO_LIMITE_DIVIDA', default=0, cast=float)
+
 # --- Confirmação de e-mail e recuperação de senha (código numérico de 6 dígitos) ---
 CODIGO_RECUPERACAO_VALIDADE_MIN = config('CODIGO_RECUPERACAO_VALIDADE_MIN', default=15, cast=int)
 CONFIRMACAO_EMAIL_VALIDADE_MIN = config('CONFIRMACAO_EMAIL_VALIDADE_MIN', default=30, cast=int)
