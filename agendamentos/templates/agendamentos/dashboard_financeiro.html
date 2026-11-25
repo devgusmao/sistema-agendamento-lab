@@ -6,7 +6,7 @@
 <style>
     .stats-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
         gap: 1rem;
         margin-bottom: 1.5rem;
     }
@@ -118,7 +118,7 @@
     </table>
 </div>
 
-<div style="margin-top: 2rem; display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:1.5rem;">
+<div style="margin-top: 2rem; display:grid; grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr)); gap:1.5rem;">
     <div class="card-table">
         <table>
             <thead><tr><th>Finalidade</th><th>Reservas</th><th>Receita</th></tr></thead>

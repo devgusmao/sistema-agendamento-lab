@@ -29,7 +29,7 @@
 
 .pc-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
     gap: 1.5rem;
 }
 
@@ -127,11 +127,48 @@
 }
 
 @media (max-width: 768px) {
-    .filter-bar {
+    /* Em coluna, o flex-basis de 180px dos filhos virava ALTURA e o centro
+       encolhia a largura: campos pequenos separados por grandes vãos. */
+    main .filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.6rem;
+        padding: 0.85rem;
+    }
+
+    main .filter-bar > div,
+    main .filter-bar > .btn-filtrar,
+    main .filter-bar > .btn-limpar {
+        flex: 0 0 auto;
+        width: 100%;
+    }
+
+    main .filter-bar .btn-filtrar,
+    main .filter-bar .btn-limpar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+    }
+
+    main .pc-grid {
+        gap: 1rem;
+    }
+
+    main .pc-actions {
         flex-direction: column;
     }
 
-    .pc-actions {
-        flex-direction: column;
+    main .pc-actions > * {
+        flex: 0 0 auto;
+        width: 100%;
+    }
+
+    main .btn-card,
+    main .btn-disabled {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 }

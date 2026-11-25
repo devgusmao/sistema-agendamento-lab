@@ -232,3 +232,38 @@
     font-weight: 700;
     letter-spacing: 0.35em;
 }
+
+/* Celular: cartões de autenticação e campos (16px evita o zoom do iOS) */
+@media (max-width: 480px) {
+    .auth-main {
+        padding: 1rem;
+    }
+
+    .auth-card,
+    .pendente-card {
+        padding: 1.5rem 1.15rem;
+    }
+
+    .field input,
+    .field select {
+        font-size: 16px;
+        min-height: 46px;
+    }
+
+    .campo-codigo {
+        font-size: 1.35rem !important;
+        letter-spacing: 0.25em;
+    }
+
+    .pendente-card .btn-logout,
+    .pendente-card .btn-reenviar,
+    .auth-card button {
+        width: 100%;
+        min-height: 46px;
+    }
+
+    .auth-hero {
+        height: 100px;
+        padding: 1rem 1.25rem;
+    }
+}

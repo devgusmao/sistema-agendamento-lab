@@ -459,28 +459,364 @@ html.sb-collapsed {
     text-align: center;
 }
 
+/* Barra superior (só no mobile) */
+.mobile-topbar,
+.sb-backdrop {
+    display: none;
+}
+
 @media (max-width: 768px) {
     html.sb-collapsed {
-        --sidebar-width: 260px;
+        --sidebar-width: 280px;
     }
 
+    .mobile-topbar {
+        position: sticky;
+        top: 0;
+        z-index: 9;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.6rem 1rem;
+        padding-top: calc(0.6rem + env(safe-area-inset-top));
+        background: var(--sidebar-bg);
+        color: #ffffff;
+    }
+
+    .mobile-topbar .sb-logo {
+        width: 32px;
+        height: 32px;
+        font-size: 1.05rem;
+    }
+
+    .mobile-topbar strong {
+        font-size: 1.05rem;
+    }
+
+    .mt-menu {
+        display: grid;
+        place-items: center;
+        width: 44px;
+        height: 44px;
+        border: 0;
+        border-radius: 10px;
+        background: var(--sidebar-hover);
+        color: #ffffff;
+        cursor: pointer;
+    }
+
+    /* Menu vira gaveta lateral, fechada por padrão */
     .sidebar {
-        position: static;
-        width: 100%;
-        height: auto;
+        width: min(var(--sidebar-width), 85vw);
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        z-index: 30;
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        box-shadow: none;
+    }
+
+    html.sb-open .sidebar {
+        transform: translateX(0);
+        box-shadow: 8px 0 30px rgba(15, 23, 42, 0.4);
+    }
+
+    html.sb-open .sb-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 25;
+        background: rgba(15, 23, 42, 0.55);
+    }
+
+    html.sb-open body {
+        overflow: hidden;
     }
 
     .sb-toggle {
         display: none;
     }
 
-    .sb-nav {
-        max-height: 60vh;
+    .sb-item,
+    .sb-sub a {
+        min-height: 44px;
     }
 
     .main-content {
         margin-left: 0;
         width: 100%;
         padding: 1rem;
+        padding-left: max(1rem, env(safe-area-inset-left));
+        padding-right: max(1rem, env(safe-area-inset-right));
+    }
+
+    .page-header h1,
+    .page-header h2 {
+        font-size: 1.45rem;
+    }
+
+    /* Tabelas largas: rolagem horizontal dentro do cartão (antes ficavam cortadas
+       por overflow:hidden). O seletor com `main` vence o <style> de cada página. */
+    main .table-card,
+    main .card-table,
+    main .card-box {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    main .table-card table,
+    main .card-table table,
+    main .card-box table {
+        min-width: 640px;
+    }
+
+    main th,
+    main td {
+        padding: 0.7rem 0.75rem;
+        white-space: nowrap;
+    }
+
+    /* Evita o zoom automático do iOS ao focar em campos (<16px) e melhora o toque */
+    input,
+    select,
+    textarea {
+        font-size: 16px !important;
+        min-height: 44px;
+    }
+
+    button,
+    .btn,
+    [class^="btn-"],
+    [class*=" btn-"] {
+        min-height: 44px;
+    }
+
+    .alert {
+        font-size: 0.9rem;
+    }
+
+    /* Caixas de marcar não podem herdar a altura mínima dos campos de texto */
+    input[type="checkbox"],
+    input[type="radio"] {
+        min-height: 0;
+        width: 22px !important;
+        height: 22px;
+        flex: none;
+    }
+
+    /* Cabeçalho com botão de ação (Novo..., Solicitar...): botão em largura total */
+    main .page-header[style],
+    main .page-header {
+        flex-wrap: wrap;
+    }
+
+    main .page-header > .btn-novo,
+    main .page-header > .btn-primary,
+    main .page-header > a.btn-novo,
+    main .page-header > a.btn-primary {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        text-align: center;
+    }
+
+    /* Formulários: cartão ocupa a largura, ações empilhadas em largura total */
+    main .form-card,
+    main .form-wrap {
+        max-width: 100%;
+        padding: 1.25rem;
+    }
+
+    main .form-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.6rem;
+    }
+
+    main .form-actions .btn-submit,
+    main .form-actions .btn-teste,
+    main .form-actions button,
+    main .btn-submit {
+        width: 100%;
+        min-height: 46px;
+    }
+
+    main .form-actions a,
+    main .btn-cancel,
+    main .btn-cancelar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        margin-left: 0;
+        text-align: center;
+    }
+
+    main .btn-cancel {
+        margin-top: 0.6rem;
+    }
+
+    main .row {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    /* Filtros (gerenciar agendamentos / usuários): um campo por linha */
+    main .filter-form {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.6rem;
+    }
+
+    main .filter-form > *,
+    main .filter-form input {
+        flex: 0 0 auto;
+        min-width: 0;
+        width: 100%;
+    }
+
+    main .filter-form button,
+    main .filter-form .btn,
+    main .filter-form a {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+    }
+
+    /* Botões de ação das tabelas: área de toque maior */
+    main .acoes {
+        flex-wrap: nowrap;
+        gap: 0.6rem;
+    }
+
+    main .acoes a,
+    main .acoes button {
+        display: inline-flex;
+        align-items: center;
+        min-height: 40px;
+        padding: 0 0.4rem;
+    }
+
+    /* Notificações: botão salvar em largura total */
+    main .actions {
+        justify-content: stretch;
+    }
+
+    main .actions button {
+        width: 100%;
+    }
+
+    /* Agendar: lista de horários ocupados e resumo */
+    main .machine-head {
+        align-items: flex-start;
+    }
+
+    main .slot-pill {
+        font-size: 0.78rem;
+    }
+
+    main .resumo-total {
+        font-size: 1.05rem;
+    }
+
+    main img {
+        height: auto;
+    }
+
+    .flatpickr-calendar {
+        max-width: 100vw;
+    }
+}
+
+@media (max-width: 480px) {
+    .main-content {
+        padding: 0.75rem;
+    }
+
+    main .form-card,
+    main .card-box {
+        padding: 1.1rem;
+    }
+}
+
+/* Celular: cada linha de tabela vira um cartão (rótulos vêm de data-label, preenchido em base.html) */
+@media (max-width: 768px) {
+    main table.tb-cards {
+        min-width: 0 !important;
+        display: block;
+    }
+
+    main table.tb-cards thead {
+        display: none;
+    }
+
+    main table.tb-cards tbody {
+        display: block;
+    }
+
+    main table.tb-cards tr {
+        display: block;
+        padding: 0.65rem 1rem;
+        border-bottom: 1px solid var(--panel-border);
+    }
+
+    main table.tb-cards tr:last-child {
+        border-bottom: 0;
+    }
+
+    main table.tb-cards td {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 0.4rem 0;
+        border: 0;
+        white-space: normal;
+        text-align: right;
+        font-size: 0.9rem;
+    }
+
+    main table.tb-cards td[data-label]::before {
+        content: attr(data-label);
+        flex: 0 0 38%;
+        max-width: 38%;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--muted-text);
+        text-align: left;
+        padding-top: 0.15rem;
+    }
+
+    main table.tb-cards td .cel {
+        flex: 1;
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    /* Linha de "nada encontrado" (colspan) e células sem rótulo ocupam tudo */
+    main table.tb-cards td:not([data-label]) {
+        display: block;
+        text-align: center;
+    }
+
+    main table.tb-cards td[data-label="Ações"] {
+        flex-wrap: wrap;
+        padding-top: 0.6rem;
+    }
+
+    main table.tb-cards td[data-label="Ações"] .acoes {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    /* Cartões já têm rolagem desnecessária: tira a barra horizontal */
+    main .table-card:has(table.tb-cards),
+    main .card-table:has(table.tb-cards),
+    main .card-box:has(table.tb-cards) {
+        overflow-x: visible;
     }
 }

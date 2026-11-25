@@ -3,7 +3,8 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f172a">
     <title>{% block title %}Painel - Agendamento de Laboratórios{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'agendamentos/css/styles.css' %}">
     <link rel="stylesheet" href="{% static 'agendamentos/css/base.css' %}">
@@ -33,6 +34,16 @@
         <symbol id="i-recolher" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
         <symbol id="i-sair" viewBox="0 0 24 24"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/></symbol>
     </svg>
+
+    <!-- Barra superior e fundo escuro do menu (somente mobile) -->
+    <header class="mobile-topbar">
+        <button type="button" class="mt-menu" id="mtMenu" aria-label="Abrir menu" aria-controls="sidebar" aria-expanded="false">
+            <svg class="sb-ico"><use href="#i-lista"/></svg>
+        </button>
+        <span class="sb-logo">L</span>
+        <strong>LabManager</strong>
+    </header>
+    <div class="sb-backdrop" id="sbBackdrop"></div>
 
     <!-- Menu lateral (expandido ou só ícones) -->
     <aside class="sidebar" id="sidebar">
@@ -115,6 +126,16 @@
             try { localStorage.setItem('sbCollapsed', recolhido ? '1' : '0'); } catch (e) {}
         });
 
+        var abrirMenu = document.getElementById('mtMenu');
+        function alternarMenu(aberto) {
+            raiz.classList.toggle('sb-open', aberto);
+            abrirMenu.setAttribute('aria-expanded', aberto ? 'true' : 'false');
+        }
+        abrirMenu.addEventListener('click', function () { alternarMenu(!raiz.classList.contains('sb-open')); });
+        document.getElementById('sbBackdrop').addEventListener('click', function () { alternarMenu(false); });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') alternarMenu(false); });
+        sidebar.querySelectorAll('a').forEach(function (a) { a.addEventListener('click', function () { alternarMenu(false); }); });
+
         sidebar.querySelectorAll('.sb-group').forEach(function (grupo) {
             var botao = grupo.querySelector('.sb-group-toggle');
             var sub = grupo.querySelector('.sb-sub');
@@ -129,6 +150,25 @@
                 }
             });
         });
+
+    // Tabelas viram cartões no celular: copia o texto de cada <th> para o data-label
+    // da célula correspondente e envolve o conteúdo para o CSS poder alinhá-lo.
+    document.querySelectorAll('main table').forEach(function (tabela) {
+        var cab = tabela.querySelectorAll('thead th');
+        if (!cab.length) return;
+        var rotulos = Array.prototype.map.call(cab, function (th) { return th.textContent.trim(); });
+        tabela.classList.add('tb-cards');
+        tabela.querySelectorAll('tbody tr').forEach(function (tr) {
+            Array.prototype.forEach.call(tr.children, function (td, i) {
+                if (td.colSpan > 1 || !rotulos[i]) return;
+                td.setAttribute('data-label', rotulos[i]);
+                var cel = document.createElement('div');
+                cel.className = 'cel';
+                while (td.firstChild) cel.appendChild(td.firstChild);
+                td.appendChild(cel);
+            });
+        });
+    });
     })();
     </script>
     {% block extra_js %}{% endblock %}
